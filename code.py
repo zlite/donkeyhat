@@ -9,20 +9,17 @@ import board
 import busio
 import rotaryio
 import neopixel
-
-try:
-    from pulseio import PulseIn
-except ImportError:
-    print("pulseio.PulseIn is not available on this board.")
-
+from pulseio import PulseIn
 from digitalio import DigitalInOut, Direction
 from pwmio import PWMOut
 
 # Customisation these variables
 DEBUG = False
 USB_SERIAL = False
+ENCODER = False
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
+
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 
@@ -80,6 +77,7 @@ uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.001)
 # set up servos
 steering_pwm = PWMOut(board.D8, duty_cycle=2 ** 15, frequency=60)
 throttle_pwm = PWMOut(board.D9, duty_cycle=2 ** 15, frequency=60)
+mode_pwm = PWMOut(board.D10, duty_cycle=2 ** 15, frequency=60)
 
 # set up RC channels.  NOTE: input channels are RCC3 & RCC4 (not RCC1 & RCC2)
 steering_channel = PulseIn(board.D2, maxlen=64, idle_state=0)
@@ -90,6 +88,7 @@ mode_channel = PulseIn(board.D4, maxlen=64, idle_state=0)
 # setup Control objects.  1500 pulse is off and center steering
 steering = Control("Steering", steering_pwm, steering_channel, 1500)
 throttle = Control("Throttle", throttle_pwm, throttle_channel, 1500)
+mode = Control("Mode", mode_pwm, mode_channel, 1500)
 
 last_update = time.monotonic()
 
@@ -128,13 +127,16 @@ def main():
         if(len(steering.channel) != 0):
             state_changed(steering)
 
+        if(len(mode.channel) != 0):
+            state_changed(mode)
+
         if(USB_SERIAL):
             # simulator USB
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
             uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
-            print("%i, %i" % (int(steering.value), int(throttle.value)))
+            print(int(steering.value), int(throttle.value), int(mode.value))
 
         while True:
             # wait for data on the serial port and read 1 byte
