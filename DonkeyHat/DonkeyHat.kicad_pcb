@@ -294,7 +294,7 @@
 		(at 110.16 91.11)
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
-		(property "Reference" "Steering1"
+		(property "Reference" "Steering"
 			(at -2.54 2.54 90)
 			(layer "F.SilkS")
 			(uuid "be1f7153-316d-4d41-8bbc-8132ce3b7451")
@@ -1756,7 +1756,7 @@
 		(at 140.64 58.09)
 		(descr "Through hole straight socket strip, 1x04, 2.54mm pitch, single row (from Kicad 4.0.7), script generated")
 		(tags "Through hole socket strip THT 1x04 2.54mm single row")
-		(property "Reference" "OLED1"
+		(property "Reference" "OLED"
 			(at 0 -2.77 0)
 			(layer "F.SilkS")
 			(uuid "590084a9-f313-43ef-9422-200773f8a3b1")
@@ -2715,7 +2715,7 @@
 		(at 113.97 91.11)
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
-		(property "Reference" "Throttle1"
+		(property "Reference" "Throttle"
 			(at 2.54 2.54 270)
 			(layer "F.SilkS")
 			(uuid "86ce6a52-199b-4f83-a7c0-0771b603b40d")
@@ -4574,28 +4574,12 @@
 		(uuid "f4c6157e-1dd5-469e-aaac-12c1f24f33c3")
 	)
 	(segment
-		(start 104.064 64.948)
-		(end 103.81 65.202)
-		(width 0.2)
-		(layer "B.Cu")
-		(net 6)
-		(uuid "b956a87d-4172-4985-93e9-e083aa522405")
-	)
-	(segment
-		(start 103.81 65.202)
-		(end 103.81 69.52)
-		(width 0.2)
-		(layer "B.Cu")
-		(net 6)
-		(uuid "d519a60a-998f-4187-a9e8-2ff2286f7633")
-	)
-	(segment
 		(start 101.778 62.662)
-		(end 104.064 64.948)
+		(end 103.81 64.694)
 		(width 0.2)
 		(layer "B.Cu")
 		(net 6)
-		(uuid "d562f7ce-0466-4f4c-a0a2-0e5ccc8dcd81")
+		(uuid "31fba138-89b4-49e1-b151-763bcb2abb9c")
 	)
 	(segment
 		(start 101.778 61.138)
@@ -4603,7 +4587,15 @@
 		(width 0.2)
 		(layer "B.Cu")
 		(net 6)
-		(uuid "f993fba6-5e6a-4246-a4e3-c1bff39f4ec5")
+		(uuid "4149a40d-c1f6-4ebf-8017-33db7c4cc037")
+	)
+	(segment
+		(start 103.81 64.694)
+		(end 103.81 69.52)
+		(width 0.2)
+		(layer "B.Cu")
+		(net 6)
+		(uuid "98e0cf43-763d-4372-81a6-a463cd6b0b31")
 	)
 	(segment
 		(start 115.748 81.077)
@@ -4798,20 +4790,12 @@
 		(uuid "000beb4e-c397-47ec-aaa7-2ed9372f2e2d")
 	)
 	(segment
-		(start 102.413 66.218)
-		(end 101.397 67.234)
+		(start 102.159 66.472)
+		(end 102.159 86.03)
 		(width 0.2)
 		(layer "B.Cu")
 		(net 31)
-		(uuid "00f87d32-6a85-4fab-83a6-f02a81233b74")
-	)
-	(segment
-		(start 101.397 67.488)
-		(end 102.159 68.25)
-		(width 0.2)
-		(layer "B.Cu")
-		(net 31)
-		(uuid "03649e45-bf9d-418b-b1db-bad48054720c")
+		(uuid "35525abf-f18d-42bc-a697-72e1fffd62c4")
 	)
 	(segment
 		(start 102.159 86.03)
@@ -4819,15 +4803,7 @@
 		(width 0.2)
 		(layer "B.Cu")
 		(net 31)
-		(uuid "49a2f1fd-0845-4d3a-bb3f-2fbc6dc97a31")
-	)
-	(segment
-		(start 101.397 67.234)
-		(end 101.397 67.488)
-		(width 0.2)
-		(layer "B.Cu")
-		(net 31)
-		(uuid "9299a4b5-d821-4ef4-8bc2-5ffee944de2e")
+		(uuid "487d8e6f-4e73-4ef0-9000-232474edbe44")
 	)
 	(segment
 		(start 102.413 64.821)
@@ -4835,7 +4811,7 @@
 		(width 0.2)
 		(layer "B.Cu")
 		(net 31)
-		(uuid "caad7dcd-84d3-4ea7-bf58-ba68659367a3")
+		(uuid "619a6629-e33d-4d78-9bc0-f39d6dc8f4b7")
 	)
 	(segment
 		(start 114.859 81.839)
@@ -4846,12 +4822,12 @@
 		(uuid "d5cf9d0d-b12b-45d1-805f-7a408d5c3262")
 	)
 	(segment
-		(start 102.159 68.25)
-		(end 102.159 86.03)
+		(start 102.413 66.218)
+		(end 102.159 66.472)
 		(width 0.2)
 		(layer "B.Cu")
 		(net 31)
-		(uuid "ea841dd6-55af-48af-b43d-fa71d35a346b")
+		(uuid "d81a1b0a-ded4-4fd9-a0e8-a35ec18c8d6c")
 	)
 	(segment
 		(start 110.16 86.157)
