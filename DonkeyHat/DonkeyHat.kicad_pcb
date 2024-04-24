@@ -985,7 +985,7 @@
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "RC3"
-			(at 0 -2.33 270)
+			(at 0 -2.33 -90)
 			(layer "F.SilkS")
 			(uuid "9c99d23f-e375-4054-b909-81a54de53b43")
 			(effects
@@ -996,7 +996,7 @@
 			)
 		)
 		(property "Value" "Conn_01x03_Pin"
-			(at 0 7.41 270)
+			(at 0 7.41 -90)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "30eb5e2a-b6bd-4b8f-8207-bfa8a42c54ab")
@@ -1371,7 +1371,7 @@
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "RC2"
-			(at 0 -2.33 270)
+			(at 0 -2.33 -90)
 			(layer "F.SilkS")
 			(uuid "27e55c4d-3cc2-47d9-84b1-bc6872915858")
 			(effects
@@ -1382,7 +1382,7 @@
 			)
 		)
 		(property "Value" "Conn_01x03_Pin"
-			(at 0 7.41 270)
+			(at 0 7.41 -90)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "7c5b60c9-4084-4400-8598-237196e5dcd2")
@@ -2044,7 +2044,7 @@
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "RC1"
-			(at 0 -2.33 270)
+			(at 0 -2.33 -90)
 			(layer "F.SilkS")
 			(uuid "143ac5fe-c185-444a-9063-04571f7f7f3f")
 			(effects
@@ -2055,7 +2055,7 @@
 			)
 		)
 		(property "Value" "RC 1"
-			(at 0 7.41 270)
+			(at 0 7.41 -90)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "2fb72d81-3af7-4782-ae73-0fcb6fa44252")
@@ -2533,7 +2533,7 @@
 			(uuid "c62f46f1-3452-416b-a0d7-bcb2158f6604")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 3.81 270)
+			(at 0 3.81 -90)
 			(layer "F.Fab")
 			(uuid "3d037e7c-1994-4501-be33-51f683a4e55e")
 			(effects
@@ -2716,7 +2716,7 @@
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "Throttle"
-			(at 2.54 2.54 270)
+			(at 2.54 2.54 -90)
 			(layer "F.SilkS")
 			(uuid "86ce6a52-199b-4f83-a7c0-0771b603b40d")
 			(effects
@@ -3807,17 +3807,6 @@
 		)
 		(layer "Edge.Cuts")
 		(uuid "dd23dcd1-1b90-426d-8427-6405ffecb8ed")
-	)
-	(gr_arc
-		(start 105 82.54)
-		(mid 104.853553 82.893553)
-		(end 104.5 83.04)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(layer "Edge.Cuts")
-		(uuid "f07b6ce9-d2eb-486d-bee9-15304e35501c")
 	)
 	(gr_line
 		(start 155.88 74.6)
