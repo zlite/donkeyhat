@@ -5707,7 +5707,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "86215f1b-7466-46fd-b77b-8c239fa35342")
-		(property "Reference" "Encoder"
+		(property "Reference" "Encoder1"
 			(at 38.735 82.55 0)
 			(effects
 				(font
@@ -5763,7 +5763,7 @@
 		(instances
 			(project "DonkeyHat"
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
-					(reference "Encoder")
+					(reference "Encoder1")
 					(unit 1)
 				)
 			)
@@ -5853,7 +5853,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9b5dba54-5944-4a1b-a9b0-ef3480c4f2c3")
-		(property "Reference" "J2"
+		(property "Reference" "5V"
 			(at 88.9 16.5099 0)
 			(effects
 				(font
@@ -5907,7 +5907,7 @@
 		(instances
 			(project "DonkeyHat"
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
-					(reference "J2")
+					(reference "5V")
 					(unit 1)
 				)
 			)
