@@ -571,7 +571,7 @@
 		(descr "Through hole straight pin header, 1x04, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x04 2.54mm single row")
 		(property "Reference" "J2"
-			(at 0 -2.33 270)
+			(at 0 -2.33 -90)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "d7b5d9d8-09ab-41e3-807c-d896696f0c38")
@@ -583,7 +583,7 @@
 			)
 		)
 		(property "Value" "Encoder 2"
-			(at 0 9.949999 270)
+			(at 0 9.949999 -90)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "89f05e55-90a6-43d8-8a67-41baae2605e0")
@@ -1571,6 +1571,7 @@
 		(property "Reference" "In3"
 			(at 0 7.605 90)
 			(layer "F.SilkS")
+			(hide yes)
 			(uuid "9c99d23f-e375-4054-b909-81a54de53b43")
 			(effects
 				(font
@@ -1955,8 +1956,9 @@
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "In2"
-			(at 0 7.605001 90)
+			(at 3.106 -20.032999 90)
 			(layer "F.SilkS")
+			(hide yes)
 			(uuid "27e55c4d-3cc2-47d9-84b1-bc6872915858")
 			(effects
 				(font
@@ -2627,7 +2629,7 @@
 		(descr "Through hole straight pin header, 1x04, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x04 2.54mm single row")
 		(property "Reference" "J3"
-			(at 0 -2.33 270)
+			(at 0 -2.33 -90)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "372eef0c-c2eb-4051-abcf-5227a1a03fb3")
@@ -2639,7 +2641,7 @@
 			)
 		)
 		(property "Value" "Encoder 1"
-			(at 0 9.949999 270)
+			(at 0 9.949999 -90)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "34979938-e3f5-4831-95b6-8c22a1cb6c55")
@@ -2917,6 +2919,7 @@
 		(property "Reference" "In1"
 			(at -0.127 7.605 90)
 			(layer "F.SilkS")
+			(hide yes)
 			(uuid "143ac5fe-c185-444a-9063-04571f7f7f3f")
 			(effects
 				(font
@@ -3191,8 +3194,9 @@
 		(descr "Through hole straight pin header, 1x04, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x04 2.54mm single row")
 		(property "Reference" "I2C"
-			(at 0 -2.33 180)
+			(at -2.681 -1.469 90)
 			(layer "F.SilkS")
+			(hide yes)
 			(uuid "fb625210-7d38-44de-b01b-3403a413bb9c")
 			(effects
 				(font
@@ -5218,51 +5222,13 @@
 		(layer "Edge.Cuts")
 		(uuid "ff5b1462-13af-4eb0-972a-a455e6ad9c83")
 	)
-	(gr_text "2"
-		(at 106.1 93.8 90)
-		(layer "F.SilkS")
-		(uuid "0d55f361-12c2-453b-889b-f0e03492002b")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.15)
-			)
-			(justify left bottom)
-		)
-	)
-	(gr_text "Thr"
-		(at 101.397 86.792 90)
-		(layer "F.SilkS")
-		(uuid "2107e3e9-9600-4be3-8116-b6337666bd0e")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.2)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
-	)
-	(gr_text "- + SCL SDA"
-		(at 115.4 82.7 90)
+	(gr_text "I2C -  +  SCL SDA"
+		(at 114.9 84.4 90)
 		(layer "F.SilkS")
 		(uuid "39a58fa8-3e1f-4202-9970-6ffaae538643")
 		(effects
 			(font
-				(size 1 1)
-				(thickness 0.2)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
-	)
-	(gr_text "St"
-		(at 101.397 90.475 90)
-		(layer "F.SilkS")
-		(uuid "3c157905-6b83-4a7f-8b9d-84b4b89326e0")
-		(effects
-			(font
-				(size 1 1)
+				(size 0.8 0.8)
 				(thickness 0.2)
 				(bold yes)
 			)
@@ -5270,7 +5236,7 @@
 		)
 	)
 	(gr_text "Encoders"
-		(at 107.4 99.7 90)
+		(at 106.7 92.8 -90)
 		(layer "F.SilkS")
 		(uuid "4453ea8b-3e0f-4cb6-bdbf-75cc80bd88c7")
 		(effects
@@ -5281,8 +5247,8 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "-  +  S1 S2"
-		(at 108.7 92.4 0)
+	(gr_text "   +  S1 S2"
+		(at 109.1 92.4 0)
 		(layer "F.SilkS")
 		(uuid "6a737625-3209-4216-9f09-4759d1a03364")
 		(effects
@@ -5300,16 +5266,28 @@
 		(effects
 			(font
 				(size 1 1)
-				(thickness 0.2)
+				(thickness 0.25)
 				(bold yes)
 			)
 			(justify left bottom)
 		)
 	)
-	(gr_text "1"
-		(at 106.1 99.9 90)
+	(gr_text "Steer"
+		(at 100.3 83.5 270)
 		(layer "F.SilkS")
-		(uuid "6fbbfa79-39b7-4e11-b9b9-e1295fea8b17")
+		(uuid "7077e720-8582-48bd-a89a-764375b6fa11")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Throt"
+		(at 100.3 88.1 270)
+		(layer "F.SilkS")
+		(uuid "79ac7517-d120-4fb8-9328-6125a172c219")
 		(effects
 			(font
 				(size 1 1)
@@ -5330,10 +5308,59 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Donkeyhat V0.1"
+	(gr_text "In3"
+		(at 100.3 80 270)
+		(layer "F.SilkS")
+		(uuid "88074044-2fca-4eea-9476-3e22c3a0d94f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "In2"
+		(at 100.3 76.2 270)
+		(layer "F.SilkS")
+		(uuid "b03754d5-1e5e-4a35-903a-90eeab3a4a78")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Donkeyhat V0.2"
 		(at 117.7 88 90)
 		(layer "F.SilkS")
 		(uuid "d5e9142a-89a3-4526-81a3-a1ebb6b2d297")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "-"
+		(at 108.5 100.1 0)
+		(layer "F.SilkS")
+		(uuid "ea16c242-c28e-4e95-86fe-ebea5399d160")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.25)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "In1"
+		(at 100.4 72.5 -90)
+		(layer "F.SilkS")
+		(uuid "f0640e33-e7ec-45fc-ab77-71076703c7e4")
 		(effects
 			(font
 				(size 1 1)
