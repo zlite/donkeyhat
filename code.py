@@ -7,11 +7,12 @@
 import time
 import board
 import busio
-import rotaryio
+import busio
 import neopixel
 from pulseio import PulseIn
-from digitalio import DigitalInOut, Direction
 from pwmio import PWMOut
+import digitalio
+
 
 # Customisation these variables
 DEBUG = False
@@ -20,16 +21,30 @@ ENCODER = False
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 
+# Pin assignments
+RC1 = board.GP6
+RC2 = board.GP5
+RC3 = board.GP4
+Steering = board.GP11
+Throttle = board.GP10
+Encoder1A = board.GP8
+Encoder1B = board.GP9
+Encoder2A = board.GP13
+Encoder2B = board.GP14
+
+
+# Set up pin for encoder channel
+encoder = digitalio.DigitalInOut(Encoder1A)
+encoder.direction = digitalio.Direction.INPUT
+encoder.pull = digitalio.Pull.DOWN
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
-
 
 ## cannot have DEBUG and USB_SERIAL
 if USB_SERIAL:
     DEBUG = False
 
 ## functions
-
 
 def servo_duty_cycle(pulse_ms, frequency = 60):
     """
@@ -75,24 +90,21 @@ class Control:
 uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.001)
 
 # set up servos
-steering_pwm = PWMOut(board.D8, duty_cycle=2 ** 15, frequency=60)
-throttle_pwm = PWMOut(board.D9, duty_cycle=2 ** 15, frequency=60)
-mode_pwm = PWMOut(board.D10, duty_cycle=2 ** 15, frequency=60)
+steering_pwm = PWMOut(Steering, duty_cycle=2 ** 15, frequency=60)
+throttle_pwm = PWMOut(Throttle, duty_cycle=2 ** 15, frequency=60)
 
-# set up RC channels.  NOTE: input channels are RCC3 & RCC4 (not RCC1 & RCC2)
-steering_channel = PulseIn(board.D2, maxlen=64, idle_state=0)
-throttle_channel = PulseIn(board.D3, maxlen=64, idle_state=0)
-mode_channel = PulseIn(board.D4, maxlen=64, idle_state=0)
+# set up RC channels.
+steering_channel = PulseIn(RC1, maxlen=64, idle_state=0)
+throttle_channel = PulseIn(RC2, maxlen=64, idle_state=0)
+mode_channel = PulseIn(RC3, maxlen=64, idle_state=0)
 
 
 # setup Control objects.  1500 pulse is off and center steering
 steering = Control("Steering", steering_pwm, steering_channel, 1500)
 throttle = Control("Throttle", throttle_pwm, throttle_channel, 1500)
-mode = Control("Mode", mode_pwm, mode_channel, 1500)
 
 last_update = time.monotonic()
 
-# GOTO: main()
 def main():
     global last_update
     last_toggle_time = time.monotonic()
@@ -104,9 +116,20 @@ def main():
     throttle_val = throttle.value
     led_state = False
     color=(0, 0, 255)
+    position = 0
+    last_state = encoder.value
+
 
     while True:
         current_time = time.monotonic()
+        current_state = encoder.value
+        if current_state != last_state:
+            if current_state == False:  # Detect falling edge
+                position += 1
+                print("Position:", position)
+        last_state = current_state
+        time.sleep(0.01)  # Debounce delay
+
         if current_time - last_toggle_time >= interval:
             if led_state:
                 pixel.fill((0, 0, 0))  # Turn off the NeoPixel
@@ -127,16 +150,13 @@ def main():
         if(len(steering.channel) != 0):
             state_changed(steering)
 
-        if(len(mode.channel) != 0):
-            state_changed(mode)
-
         if(USB_SERIAL):
             # simulator USB
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
             uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
-            print(int(steering.value), int(throttle.value), int(mode.value))
+            print(int(steering.value), int(throttle.value))
 
         while True:
             # wait for data on the serial port and read 1 byte
@@ -147,7 +167,7 @@ def main():
                 break
             last_input = time.monotonic()
 
-            # if data is recieved, check if it is the end of a stream
+            # if data is received, check if it is the end of a stream
             if(byte == b'\r'):
                 data = bytearray()
                 break
