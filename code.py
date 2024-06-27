@@ -22,15 +22,15 @@ SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 
 # Pin assignments
-RC1 = board.GP6
-RC2 = board.GP5
-RC3 = board.GP4
+RC1 = board.GP27
+RC2 = board.GP26
+RC3 = board.GP29
 Steering = board.GP11
 Throttle = board.GP10
-Encoder1A = board.GP8
-Encoder1B = board.GP9
-Encoder2A = board.GP13
-Encoder2B = board.GP14
+Encoder1A = board.GP28
+Encoder1B = board.GP14
+Encoder2A = board.GP15
+Encoder2B = board.GP9
 
 
 # Set up pin for encoder channel
