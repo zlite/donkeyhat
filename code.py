@@ -100,9 +100,14 @@ steering = Control("Steering", steering_pwm, steering_channel, 1500)
 throttle = Control("Throttle", throttle_pwm, throttle_channel, 1500)
 
 last_update = time.monotonic()
+continuous_mode = False
+continuous_delay = 0
+
+position1 = 0
+position2 = 0
 
 def main():
-    global last_update
+    global last_update, continuous_mode, continuous_delay, position1, position2
     last_toggle_time = time.monotonic()
     interval = 1  # Seconds
     data = bytearray()
@@ -112,8 +117,6 @@ def main():
     throttle_val = throttle.value
     led_state = False
     color = (0, 0, 255)
-    position1 = 0
-    position2 = 0
     last_state1 = encoder1.value
     last_state2 = encoder2.value
 
@@ -125,16 +128,21 @@ def main():
         if current_state1 != last_state1:  # encoder1 state changed
             if current_state1 == False:  # Detect falling edge
                 position1 += 1
-                print("Position1:", position1)
 
         if current_state2 != last_state2:  # encoder2 state changed
             if current_state2 == False:  # Detect falling edge
                 position2 += 1
-                print("Position2:", position2)
 
         last_state1 = current_state1
         last_state2 = current_state2
         time.sleep(0.01)  # Debounce delay
+
+        if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
+            uart.write(b"%i, %i, %i, %i; %i, %i\r\n" % (
+                int(steering.value), int(throttle.value),
+                position1, int(current_time * 1000),
+                position2, int(current_time * 1000)))
+            last_toggle_time = current_time
 
         if current_time - last_toggle_time >= interval:
             if led_state:
@@ -163,7 +171,7 @@ def main():
         else:
             # write the RC values to the RPi Serial
             uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
-            print(int(steering.value), int(throttle.value))
+            # print(int(steering.value), int(throttle.value))
 
         while True:
             # wait for data on the serial port and read 1 byte
@@ -176,12 +184,13 @@ def main():
 
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
+                command = datastr.strip()
+                datastr = ''
+                handle_command(command)
                 data = bytearray()
                 break
 
             data[len(data):len(data)] = byte
-
-            # convert bytearray to string
             datastr = ''.join([chr(c) for c in data]).strip()
 
         # if we make it here, there is serial data from the previous step
@@ -204,9 +213,34 @@ def main():
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
         else:
-            # set the servo for serial data (recieved)
+            # set the servo for serial data (received)
             steering.servo.duty_cycle = servo_duty_cycle(steering_val)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
+
+def handle_command(command):
+    global position1, position2, continuous_mode, continuous_delay
+    if command == 'r':
+        position1 = 0
+        position2 = 0
+        print("Positions reset to zero")
+    elif command == 'p':
+        current_time = time.monotonic()
+        uart.write(b"%i, %i, %i, %i; %i, %i\r\n" % (
+            int(steering.value), int(throttle.value),
+            position1, int(current_time * 1000),
+            position2, int(current_time * 1000)))
+        print("Position sent")
+    elif command.startswith('c'):
+        if len(command) > 1 and command[1:].isdigit():
+            continuous_delay = int(command[1:])
+            continuous_mode = True
+            print(f"Continuous mode started with {continuous_delay} ms delay")
+        else:
+            continuous_mode = not continuous_mode
+            if continuous_mode:
+                print("Continuous mode started with default delay")
+            else:
+                print("Continuous mode stopped")
 
 # Run
 print("Run!")
