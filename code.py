@@ -11,6 +11,7 @@ import neopixel
 from pulseio import PulseIn
 from pwmio import PWMOut
 import digitalio
+import rotaryio
 
 # Customisation these variables
 DEBUG = False
@@ -18,6 +19,7 @@ USB_SERIAL = False
 ENCODER = False
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
+USE_QUADRATURE = False  # Set to False to use regular encoder
 
 # Pin assignments
 RC1 = board.GP27
@@ -25,19 +27,24 @@ RC2 = board.GP26
 RC3 = board.GP29
 Steering = board.GP11
 Throttle = board.GP10
-Encoder1A = board.GP28
-Encoder1B = board.GP14
-Encoder2A = board.GP15
-Encoder2B = board.GP9
+Encoder1A_pin = board.GP8
+Encoder1B_pin = board.GP9
+Encoder2A_pin = board.GP13
+Encoder2B_pin = board.GP14
 
-# Set up pins for encoder channel
-encoder1 = digitalio.DigitalInOut(Encoder1A)
-encoder1.direction = digitalio.Direction.INPUT
-encoder1.pull = digitalio.Pull.DOWN
+if USE_QUADRATURE:
+    # Set up the quadrature encoders
+    encoder1 = rotaryio.IncrementalEncoder(Encoder1A_pin, Encoder1B_pin)
+    encoder2 = rotaryio.IncrementalEncoder(Encoder2A_pin, Encoder2B_pin)
+else:
+    # Set up pins for regular encoders
+    encoder1 = digitalio.DigitalInOut(Encoder1A_pin)
+    encoder1.direction = digitalio.Direction.INPUT
+    encoder1.pull = digitalio.Pull.DOWN
 
-encoder2 = digitalio.DigitalInOut(Encoder2A)
-encoder2.direction = digitalio.Direction.INPUT
-encoder2.pull = digitalio.Pull.DOWN
+    encoder2 = digitalio.DigitalInOut(Encoder2A_pin)
+    encoder2.direction = digitalio.Direction.INPUT
+    encoder2.pull = digitalio.Pull.DOWN
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 
@@ -47,7 +54,7 @@ if USB_SERIAL:
 
 ## functions
 
-def servo_duty_cycle(pulse_ms, frequency = 60):
+def servo_duty_cycle(pulse_ms, frequency=60):
     """
     Formula for working out the servo duty_cycle at 16 bit input
     """
@@ -57,13 +64,13 @@ def servo_duty_cycle(pulse_ms, frequency = 60):
 
 def state_changed(control):
     """
-    Reads the RC channel and smoothes value
+    Reads the RC channel and smooths value
     """
     control.channel.pause()
     for i in range(0, len(control.channel)):
         val = control.channel[i]
         # prevent ranges outside of control space
-        if(val < 1000 or val > 2000):
+        if val < 1000 or val > 2000:
             continue
         # set new value
         control.value = (control.value + val) / 2
@@ -117,24 +124,33 @@ def main():
     throttle_val = throttle.value
     led_state = False
     color = (0, 0, 255)
-    last_state1 = encoder1.value
-    last_state2 = encoder2.value
+    if not USE_QUADRATURE:
+        last_state1 = encoder1.value
+        last_state2 = encoder2.value
 
     while True:
         current_time = time.monotonic()
-        current_state1 = encoder1.value
-        current_state2 = encoder2.value
 
-        if current_state1 != last_state1:  # encoder1 state changed
-            if current_state1 == False:  # Detect falling edge
-                position1 += 1
+        if USE_QUADRATURE:
+            # Read the positions from the quadrature encoders
+            position1 = encoder1.position
+            position2 = encoder2.position
+        else:
+            # Read the positions from the regular encoders
+            current_state1 = encoder1.value
+            current_state2 = encoder2.value
 
-        if current_state2 != last_state2:  # encoder2 state changed
-            if current_state2 == False:  # Detect falling edge
-                position2 += 1
+            if current_state1 != last_state1:  # encoder1 state changed
+                if current_state1 == False:  # Detect falling edge
+                    position1 += 1
 
-        last_state1 = current_state1
-        last_state2 = current_state2
+            if current_state2 != last_state2:  # encoder2 state changed
+                if current_state2 == False:  # Detect falling edge
+                    position2 += 1
+
+            last_state1 = current_state1
+            last_state2 = current_state2
+
         time.sleep(0.01)  # Debounce delay
 
         if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
@@ -222,6 +238,9 @@ def handle_command(command):
     if command == 'r':
         position1 = 0
         position2 = 0
+        if USE_QUADRATURE:
+            encoder1.position = 0
+            encoder2.position = 0
         print("Positions reset to zero")
     elif command == 'p':
         current_time = time.monotonic()
