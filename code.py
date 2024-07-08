@@ -2,7 +2,7 @@
 #
 # Notes:
 #   This is to be run using CircuitPython 9.x
-#   Last Updated: 4/08/2024
+#   Last Updated: 7/07/2024
 
 import time
 import board
@@ -13,7 +13,7 @@ from pwmio import PWMOut
 import digitalio
 import rotaryio
 
-# Customisation these variables
+# Customisation variables
 DEBUG = False
 USB_SERIAL = False
 SMOOTHING_INTERVAL_IN_S = 0.025
