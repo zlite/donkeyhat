@@ -15,7 +15,7 @@ import rotaryio
 
 # Customisation variables
 DEBUG = False
-USB_SERIAL = False
+USB_SERIAL = True
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
@@ -73,6 +73,8 @@ def state_changed(control):
             continue
         # set new value
         control.value = (control.value + val) / 2
+        if control.value > 1475 and control.value < 1525:
+            control.value = 1500
 
     control.channel.clear()
     control.channel.resume()
