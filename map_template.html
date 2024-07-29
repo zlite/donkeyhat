@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <style>
+        #map { height: 100vh; width: 100%; cursor: crosshair; }
+        .leaflet-marker-icon { cursor: move; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([51.4676, -0.2409], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var markers = [];
+        var polyline = L.polyline([], { color: 'blue' }).addTo(map); // Create a polyline
+
+        function createNumberedIcon(number) {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:#4838cc;color:white;width:20px;height:20px;border-radius:50%;display:flex;justify-content:center;align-items:center;'>" + number + "</div>",
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        }
+
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            window.bridge = channel.objects.bridge;
+            
+            map.on('click', function (e) {
+                var marker = L.marker(e.latlng, {draggable: true, icon: createNumberedIcon(markers.length + 1)}).addTo(map);
+                markers.push(marker);
+                window.bridge.addWaypoint(e.latlng.lat, e.latlng.lng);
+
+                marker.on('dragend', function(event) {
+                    var position = marker.getLatLng();
+                    window.bridge.updateWaypoint(markers.indexOf(marker), position.lat, position.lng);
+                });
+
+                updatePolyline(); // Update polyline whenever a new marker is added
+            });
+
+            window.updateMarkers = function(waypointsList) {
+                // Remove all existing markers
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+
+                // Add new markers based on the updated list
+                waypointsList.forEach((waypoint, index) => {
+                    var marker = L.marker([waypoint.lat, waypoint.lng], {draggable: true, icon: createNumberedIcon(index + 1)}).addTo(map);
+                    markers.push(marker);
+
+                    marker.on('dragend', function(event) {
+                        var position = marker.getLatLng();
+                        window.bridge.updateWaypoint(index, position.lat, position.lng);
+                    });
+                });
+
+                updatePolyline(); // Update polyline when markers are updated
+            };
+
+            function updatePolyline() {
+                // Clear the existing polyline
+                polyline.setLatLngs(markers.map(marker => marker.getLatLng()));
+            }
+        });
+    </script>
+</body>
+</html>
