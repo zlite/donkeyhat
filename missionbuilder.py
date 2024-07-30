@@ -90,8 +90,6 @@ class WaypointCreator(QMainWindow):
         page = CustomWebEnginePage(self.map_widget)
         page.profile().setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
         page.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
-        
-        # Enable persistent cookies
         page.profile().setPersistentCookiesPolicy(QWebEngineProfile.AllowPersistentCookies)
         
         self.map_widget.setPage(page)

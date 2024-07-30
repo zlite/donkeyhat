@@ -10,7 +10,7 @@
         #map { height: 100vh; width: 100%; cursor: crosshair; }
         .leaflet-marker-icon { cursor: move; }
         .map-controls { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; }
-        .map-controls button { margin-bottom: 5px; }
+        .map-controls button { margin-bottom: 5px; display: block; width: 100%; }
     </style>
 </head>
 <body>
@@ -25,8 +25,9 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        var googleSatLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '&copy; <a href="https://www.google.com/intl/en_us/help/terms_maps.html">Google</a>',
+            maxZoom: 20
         });
 
         var markers = [];
@@ -42,12 +43,12 @@
         }
 
         document.getElementById('satelliteToggle').addEventListener('click', function() {
-            if (map.hasLayer(satelliteLayer)) {
-                map.removeLayer(satelliteLayer);
+            if (map.hasLayer(googleSatLayer)) {
+                map.removeLayer(googleSatLayer);
                 map.addLayer(osmLayer);
             } else {
                 map.removeLayer(osmLayer);
-                map.addLayer(satelliteLayer);
+                map.addLayer(googleSatLayer);
             }
         });
 
@@ -61,7 +62,7 @@
         });
 
         map.on('locationerror', function(e) {
-            alert("Location access denied.");
+            alert("Location access denied or unavailable.");
         });
 
         new QWebChannel(qt.webChannelTransport, function (channel) {
