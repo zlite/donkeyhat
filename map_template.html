@@ -9,18 +9,28 @@
     <style>
         #map { height: 100vh; width: 100%; cursor: crosshair; }
         .leaflet-marker-icon { cursor: move; }
+        .map-controls { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; }
+        .map-controls button { margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="map-controls">
+        <button id="satelliteToggle">Toggle Satellite View</button>
+        <button id="myLocation">My Location</button>
+    </div>
     <script>
         var map = L.map('map').setView([51.4676, -0.2409], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
         var markers = [];
-        var polyline = L.polyline([], { color: 'blue' }).addTo(map); // Create a polyline
+        var polyline = L.polyline([], { color: 'blue' }).addTo(map);
 
         function createNumberedIcon(number) {
             return L.divIcon({
@@ -30,6 +40,29 @@
                 iconAnchor: [10, 10]
             });
         }
+
+        document.getElementById('satelliteToggle').addEventListener('click', function() {
+            if (map.hasLayer(satelliteLayer)) {
+                map.removeLayer(satelliteLayer);
+                map.addLayer(osmLayer);
+            } else {
+                map.removeLayer(osmLayer);
+                map.addLayer(satelliteLayer);
+            }
+        });
+
+        document.getElementById('myLocation').addEventListener('click', function() {
+            map.locate({setView: true, maxZoom: 16});
+        });
+
+        map.on('locationfound', function(e) {
+            L.marker(e.latlng).addTo(map)
+                .bindPopup("You are here").openPopup();
+        });
+
+        map.on('locationerror', function(e) {
+            alert("Location access denied.");
+        });
 
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.bridge = channel.objects.bridge;
@@ -44,15 +77,13 @@
                     window.bridge.updateWaypoint(markers.indexOf(marker), position.lat, position.lng);
                 });
 
-                updatePolyline(); // Update polyline whenever a new marker is added
+                updatePolyline();
             });
 
             window.updateMarkers = function(waypointsList) {
-                // Remove all existing markers
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
 
-                // Add new markers based on the updated list
                 waypointsList.forEach((waypoint, index) => {
                     var marker = L.marker([waypoint.lat, waypoint.lng], {draggable: true, icon: createNumberedIcon(index + 1)}).addTo(map);
                     markers.push(marker);
@@ -63,11 +94,10 @@
                     });
                 });
 
-                updatePolyline(); // Update polyline when markers are updated
+                updatePolyline();
             };
 
             function updatePolyline() {
-                // Clear the existing polyline
                 polyline.setLatLngs(markers.map(marker => marker.getLatLng()));
             }
         });

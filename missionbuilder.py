@@ -1,11 +1,14 @@
 import sys
 import csv
+import os
 from PySide2.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel
-from PySide2.QtWebEngineWidgets import QWebEngineView
+from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PySide2.QtCore import QUrl, QObject, Slot, Qt
 from PySide2.QtWebChannel import QWebChannel
-import json
-import os
+
+class CustomWebEnginePage(QWebEnginePage):
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        print(f"JS: {message}")
 
 class Bridge(QObject):
     @Slot(float, float)
@@ -51,52 +54,59 @@ class WaypointCreator(QMainWindow):
         self.setWindowTitle("Donkeycar Waypoint Creator")
         self.setGeometry(100, 100, 1200, 600)
 
-        # Main layout
         main_layout = QHBoxLayout()
 
-        # Map widget
         self.map_widget = QWebEngineView()
         main_layout.addWidget(self.map_widget, 7)
 
-        # Sidebar layout
         sidebar_layout = QVBoxLayout()
         
-        # Waypoint list
         self.waypoint_list = QListWidget()
         self.waypoint_list.setDragDropMode(QListWidget.InternalMove)
         self.waypoint_list.model().rowsMoved.connect(self.on_waypoints_reordered)
         sidebar_layout.addWidget(self.waypoint_list)
 
-        # Delete button
         delete_button = QPushButton("Delete Selected Waypoint")
         delete_button.clicked.connect(self.delete_selected_waypoint)
         sidebar_layout.addWidget(delete_button)
 
-        # Save button
         save_button = QPushButton("Save Waypoints")
         save_button.clicked.connect(self.save_waypoints)
         sidebar_layout.addWidget(save_button)
 
         main_layout.addLayout(sidebar_layout, 3)
 
-        # Set the main layout
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-        # Initialize map
         self.init_map()
 
     def init_map(self):
-        # Set up WebChannel
         self.channel = QWebChannel()
         self.bridge = Bridge()
         self.channel.registerObject('bridge', self.bridge)
+
+        page = CustomWebEnginePage(self.map_widget)
+        page.profile().setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+        page.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
+        
+        # Enable persistent cookies
+        page.profile().setPersistentCookiesPolicy(QWebEngineProfile.AllowPersistentCookies)
+        
+        self.map_widget.setPage(page)
         self.map_widget.page().setWebChannel(self.channel)
 
-        # Load the HTML file
         html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "map_template.html")
         self.map_widget.setUrl(QUrl.fromLocalFile(html_path))
+
+        self.map_widget.page().featurePermissionRequested.connect(self.handlePermissionRequest)
+
+    def handlePermissionRequest(self, url, feature):
+        if feature in (QWebEnginePage.Geolocation, QWebEnginePage.MediaAudioCapture, QWebEnginePage.MediaVideoCapture, QWebEnginePage.MediaAudioVideoCapture):
+            self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
+        else:
+            self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
 
     def add_waypoint(self, lat, lng):
         waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng)
@@ -104,13 +114,13 @@ class WaypointCreator(QMainWindow):
         item.setSizeHint(waypoint_widget.sizeHint())
         self.waypoint_list.addItem(item)
         self.waypoint_list.setItemWidget(item, waypoint_widget)
-        print(f"Waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")  # Debug print
+        print(f"Waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def update_waypoint(self, index, lat, lng):
         item = self.waypoint_list.item(index)
         waypoint_widget = self.waypoint_list.itemWidget(item)
         waypoint_widget.update_coords(lat, lng)
-        print(f"Waypoint updated: Lat: {lat:.6f}, Lng: {lng:.6f}")  # Debug print
+        print(f"Waypoint updated: Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def on_waypoints_reordered(self):
         for i in range(self.waypoint_list.count()):
@@ -127,28 +137,18 @@ class WaypointCreator(QMainWindow):
             self.on_waypoints_reordered()
 
     def update_map_markers(self):
-        waypoints = []
-        for i in range(self.waypoint_list.count()):
-            item = self.waypoint_list.item(i)
-            waypoint_widget = self.waypoint_list.itemWidget(item)
-            data = waypoint_widget.get_data()
-            waypoints.append(data)
-        
-        self.map_widget.page().runJavaScript(f"updateMarkers({json.dumps(waypoints)})")
+        waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
+                     for i in range(self.waypoint_list.count())]
+        self.map_widget.page().runJavaScript(f"updateMarkers({waypoints})")
 
     def save_waypoints(self):
-        waypoints = []
-        for i in range(self.waypoint_list.count()):
-            item = self.waypoint_list.item(i)
-            waypoint_widget = self.waypoint_list.itemWidget(item)
-            data = waypoint_widget.get_data()
-            waypoints.append([data["lat"], data["lng"], data["speed"]])
-
+        waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
+                     for i in range(self.waypoint_list.count())]
         with open('waypoints.csv', 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['Latitude', 'Longitude', 'Speed (m/s)'])  # Write header
-            writer.writerows(waypoints)  # Write data
-
+            writer.writerow(['Latitude', 'Longitude', 'Speed (m/s)'])
+            for wp in waypoints:
+                writer.writerow([wp['lat'], wp['lng'], wp['speed']])
         print("Waypoints saved to waypoints.csv")
 
 if __name__ == '__main__':
