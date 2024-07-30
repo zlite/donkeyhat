@@ -1,4 +1,5 @@
 import sys
+import csv
 from PySide2.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtCore import QUrl, QObject, Slot, Qt
@@ -143,9 +144,12 @@ class WaypointCreator(QMainWindow):
             data = waypoint_widget.get_data()
             waypoints.append([data["lat"], data["lng"], data["speed"]])
 
-        with open('waypoints.json', 'w') as f:
-            json.dump(waypoints, f)
-        print("Waypoints saved to waypoints.json")
+        with open('waypoints.csv', 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Latitude', 'Longitude', 'Speed (m/s)'])  # Write header
+            writer.writerows(waypoints)  # Write data
+
+        print("Waypoints saved to waypoints.csv")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
