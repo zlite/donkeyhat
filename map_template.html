@@ -11,7 +11,7 @@
         #map { height: 100vh; width: 100%; cursor: crosshair; }
         .leaflet-marker-icon { cursor: move; }
         .map-controls { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; }
-        .location-button { position: absolute; top: 50px; right: 10px; background: white; border: none; cursor: pointer; font-size: 24px; color: #007bff; z-index: 1000; }
+        .location-button { position: absolute; bottom: 10px; right: 10px; background: white; border: none; cursor: pointer; font-size: 24px; color: #007bff; z-index: 1000; width: 30px; height: 30px; border-radius: 4px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 5px rgba(0,0,0,0.65); }
     </style>
 </head>
 <body>
@@ -33,6 +33,7 @@
 
         var markers = [];
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
+        var locationMarker = null;
 
         function createNumberedIcon(number) {
             return L.divIcon({
@@ -58,7 +59,10 @@
         });
 
         map.on('locationfound', function(e) {
-            L.marker(e.latlng).addTo(map)
+            if (locationMarker) {
+                map.removeLayer(locationMarker);
+            }
+            locationMarker = L.marker(e.latlng).addTo(map)
                 .bindPopup("You are here").openPopup();
         });
 
