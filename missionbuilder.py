@@ -1,7 +1,8 @@
 import sys
 import csv
 import os
-from PySide2.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel
+import math
+from PySide2.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel, QFileDialog, QCheckBox
 from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PySide2.QtCore import QUrl, QObject, Slot, Qt
 from PySide2.QtWebChannel import QWebChannel
@@ -20,32 +21,47 @@ class Bridge(QObject):
         window.update_waypoint(index, lat, lng)
 
 class WaypointWidget(QWidget):
-    def __init__(self, number, lat, lng, speed=10.0, parent=None):
+    def __init__(self, number, lat, lng, throttle=0.2, parent=None):
         super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.number_label = QLabel(f"{number}.")
-        self.coords_label = QLabel(f"Lat: {lat:.6f}, Lng: {lng:.6f}")
-        self.speed_spinbox = QDoubleSpinBox()
-        self.speed_spinbox.setRange(0, 100)
-        self.speed_spinbox.setValue(speed)
-        self.speed_spinbox.setSuffix(" m/s")
+        self.coords_label = QLabel()
+        self.throttle_spinbox = QDoubleSpinBox()
+        self.throttle_spinbox.setRange(0, 1)
+        self.throttle_spinbox.setSingleStep(0.1)
+        self.throttle_spinbox.setValue(throttle)
+        self.throttle_spinbox.setDecimals(2)
 
-        layout.addWidget(self.number_label)
-        layout.addWidget(self.coords_label, 1)
-        layout.addWidget(self.speed_spinbox)
+        self.layout.addWidget(self.number_label)
+        self.layout.addWidget(self.coords_label, 1)
+        self.layout.addWidget(QLabel("Throttle:"))
+        self.layout.addWidget(self.throttle_spinbox)
+
+        self.lat = lat
+        self.lng = lng
+        self.update_coords(lat, lng)
 
     def update_number(self, number):
         self.number_label.setText(f"{number}.")
 
-    def update_coords(self, lat, lng):
-        self.coords_label.setText(f"Lat: {lat:.6f}, Lng: {lng:.6f}")
+    def update_coords(self, lat, lng, relative=False, home_lat=None, home_lng=None):
+        self.lat = lat
+        self.lng = lng
+        if relative and home_lat is not None and home_lng is not None:
+            dlat = lat - home_lat
+            dlng = lng - home_lng
+            dlat_m = dlat * 111139  # Convert degrees latitude to meters
+            dlng_m = dlng * 111139 * math.cos(math.radians(home_lat))  # Convert degrees longitude to meters
+            self.coords_label.setText(f"ΔLat: {dlat_m:.2f}m, ΔLng: {dlng_m:.2f}m")
+        else:
+            self.coords_label.setText(f"Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def get_data(self):
         return {
-            "lat": float(self.coords_label.text().split(", ")[0].split(": ")[1]),
-            "lng": float(self.coords_label.text().split(", ")[1].split(": ")[1]),
-            "speed": self.speed_spinbox.value()
+            "lat": self.lat,
+            "lng": self.lng,
+            "throttle": self.throttle_spinbox.value()
         }
 
 class WaypointCreator(QMainWindow):
@@ -74,6 +90,14 @@ class WaypointCreator(QMainWindow):
         save_button.clicked.connect(self.save_waypoints)
         sidebar_layout.addWidget(save_button)
 
+        load_button = QPushButton("Load Waypoints")
+        load_button.clicked.connect(self.load_waypoints)
+        sidebar_layout.addWidget(load_button)
+
+        self.relative_checkbox = QCheckBox("Use Relative Coordinates")
+        self.relative_checkbox.stateChanged.connect(self.toggle_relative_coordinates)
+        sidebar_layout.addWidget(self.relative_checkbox)
+
         main_layout.addLayout(sidebar_layout, 3)
 
         central_widget = QWidget()
@@ -81,6 +105,8 @@ class WaypointCreator(QMainWindow):
         self.setCentralWidget(central_widget)
 
         self.init_map()
+        self.home_lat = None
+        self.home_lng = None
 
     def init_map(self):
         self.channel = QWebChannel()
@@ -106,18 +132,23 @@ class WaypointCreator(QMainWindow):
         else:
             self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
 
-    def add_waypoint(self, lat, lng):
-        waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng)
+    def add_waypoint(self, lat, lng, throttle=0.2):
+        if self.home_lat is None:
+            self.home_lat, self.home_lng = lat, lng
+        
+        waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
         item = QListWidgetItem(self.waypoint_list)
         item.setSizeHint(waypoint_widget.sizeHint())
         self.waypoint_list.addItem(item)
         self.waypoint_list.setItemWidget(item, waypoint_widget)
+        self.update_waypoint_display()
         print(f"Waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def update_waypoint(self, index, lat, lng):
         item = self.waypoint_list.item(index)
         waypoint_widget = self.waypoint_list.itemWidget(item)
         waypoint_widget.update_coords(lat, lng)
+        self.update_waypoint_display()
         print(f"Waypoint updated: Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def on_waypoints_reordered(self):
@@ -125,6 +156,7 @@ class WaypointCreator(QMainWindow):
             item = self.waypoint_list.item(i)
             waypoint_widget = self.waypoint_list.itemWidget(item)
             waypoint_widget.update_number(i + 1)
+        self.update_waypoint_display()
         self.update_map_markers()
 
     def delete_selected_waypoint(self):
@@ -132,7 +164,8 @@ class WaypointCreator(QMainWindow):
         if selected_items:
             for item in selected_items:
                 self.waypoint_list.takeItem(self.waypoint_list.row(item))
-            self.on_waypoints_reordered()
+            self.update_waypoint_display()
+            self.update_map_markers()
 
     def update_map_markers(self):
         waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
@@ -140,14 +173,65 @@ class WaypointCreator(QMainWindow):
         self.map_widget.page().runJavaScript(f"updateMarkers({waypoints})")
 
     def save_waypoints(self):
-        waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
-                     for i in range(self.waypoint_list.count())]
-        with open('waypoints.csv', 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Latitude', 'Longitude', 'Speed (m/s)'])
-            for wp in waypoints:
-                writer.writerow([wp['lat'], wp['lng'], wp['speed']])
-        print("Waypoints saved to waypoints.csv")
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Waypoints", "donkey_path.csv", "CSV Files (*.csv)", options=options)
+        if file_name:
+            waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
+                         for i in range(self.waypoint_list.count())]
+            with open(file_name, 'w', newline='') as f:
+                writer = csv.writer(f)
+                for i, wp in enumerate(waypoints):
+                    if self.relative_checkbox.isChecked() and i > 0:
+                        lat, lng = self.get_relative_coords(wp['lat'], wp['lng'])
+                    else:
+                        lat, lng = wp['lat'], wp['lng']
+                    writer.writerow([lat, lng, wp['throttle']])
+            print(f"Waypoints saved to {file_name}")
+
+    def load_waypoints(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "Load Waypoints", "", "CSV Files (*.csv)", options=options)
+        if file_name:
+            self.waypoint_list.clear()
+            self.home_lat = None
+            self.home_lng = None
+            with open(file_name, 'r') as f:
+                reader = csv.reader(f)
+                for i, row in enumerate(reader):
+                    if len(row) == 3:
+                        lat, lng, throttle = float(row[0]), float(row[1]), float(row[2])
+                        if self.relative_checkbox.isChecked() and i > 0:
+                            lat, lng = self.get_absolute_coords(lat, lng)
+                        self.add_waypoint(lat, lng, throttle)
+            self.update_map_markers()
+            print(f"Waypoints loaded from {file_name}")
+
+    def toggle_relative_coordinates(self):
+        self.update_waypoint_display()
+        self.update_map_markers()
+
+    def update_waypoint_display(self):
+        relative = self.relative_checkbox.isChecked()
+        for i in range(self.waypoint_list.count()):
+            item = self.waypoint_list.item(i)
+            waypoint_widget = self.waypoint_list.itemWidget(item)
+            data = waypoint_widget.get_data()
+            if relative and i > 0:
+                waypoint_widget.update_coords(data['lat'], data['lng'], relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+            else:
+                waypoint_widget.update_coords(data['lat'], data['lng'])
+
+    def get_relative_coords(self, lat, lng):
+        dlat = lat - self.home_lat
+        dlng = lng - self.home_lng
+        return dlat, dlng
+
+    def get_absolute_coords(self, dlat, dlng):
+        lat = self.home_lat + dlat
+        lng = self.home_lng + dlng
+        return lat, lng
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
