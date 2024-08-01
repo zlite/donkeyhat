@@ -78,9 +78,14 @@
                 markers.push(marker);
                 window.bridge.addWaypoint(e.latlng.lat, e.latlng.lng);
 
+                marker.on('dragstart', function(event) {
+                    map.removeLayer(polyline);
+                });
+
                 marker.on('dragend', function(event) {
                     var position = marker.getLatLng();
                     window.bridge.updateWaypoint(markers.indexOf(marker), position.lat, position.lng);
+                    updatePolyline();
                 });
 
                 updatePolyline();
@@ -94,9 +99,14 @@
                     var marker = L.marker([waypoint.lat, waypoint.lng], {draggable: true, icon: createNumberedIcon(index + 1)}).addTo(map);
                     markers.push(marker);
 
+                    marker.on('dragstart', function(event) {
+                        map.removeLayer(polyline);
+                    });
+
                     marker.on('dragend', function(event) {
                         var position = marker.getLatLng();
                         window.bridge.updateWaypoint(index, position.lat, position.lng);
+                        updatePolyline();
                     });
                 });
 
@@ -104,7 +114,11 @@
             };
 
             function updatePolyline() {
-                polyline.setLatLngs(markers.map(marker => marker.getLatLng()));
+                if (map.hasLayer(polyline)) {
+                    map.removeLayer(polyline);
+                }
+                var latlngs = markers.map(marker => marker.getLatLng());
+                polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
             }
         });
     </script>

@@ -58,11 +58,23 @@ class WaypointWidget(QWidget):
             self.coords_label.setText(f"Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def get_data(self):
-        return {
-            "lat": self.lat,
-            "lng": self.lng,
-            "throttle": self.throttle_spinbox.value()
-        }
+        text = self.coords_label.text()
+        if "ΔLat" in text and "ΔLng" in text:
+            dlat_m = float(text.split(", ")[0].split(": ")[1][:-1])
+            dlng_m = float(text.split(", ")[1].split(": ")[1][:-1])
+            dlat = dlat_m / 111139
+            dlng = dlng_m / (111139 * math.cos(math.radians(self.lat)))
+            return {
+                "lat": self.lat,
+                "lng": self.lng,
+                "throttle": self.throttle_spinbox.value()
+            }
+        else:
+            return {
+                "lat": float(text.split(", ")[0].split(": ")[1]),
+                "lng": float(text.split(", ")[1].split(": ")[1]),
+                "throttle": self.throttle_spinbox.value()
+            }
 
 class WaypointCreator(QMainWindow):
     def __init__(self):
@@ -156,7 +168,6 @@ class WaypointCreator(QMainWindow):
             item = self.waypoint_list.item(i)
             waypoint_widget = self.waypoint_list.itemWidget(item)
             waypoint_widget.update_number(i + 1)
-        self.update_waypoint_display()
         self.update_map_markers()
 
     def delete_selected_waypoint(self):
@@ -164,8 +175,7 @@ class WaypointCreator(QMainWindow):
         if selected_items:
             for item in selected_items:
                 self.waypoint_list.takeItem(self.waypoint_list.row(item))
-            self.update_waypoint_display()
-            self.update_map_markers()
+            self.on_waypoints_reordered()
 
     def update_map_markers(self):
         waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
@@ -197,20 +207,48 @@ class WaypointCreator(QMainWindow):
             self.waypoint_list.clear()
             self.home_lat = None
             self.home_lng = None
+            
+            waypoints = []
             with open(file_name, 'r') as f:
                 reader = csv.reader(f)
-                for i, row in enumerate(reader):
+                for row in reader:
                     if len(row) == 3:
                         lat, lng, throttle = float(row[0]), float(row[1]), float(row[2])
-                        if self.relative_checkbox.isChecked() and i > 0:
-                            lat, lng = self.get_absolute_coords(lat, lng)
-                        self.add_waypoint(lat, lng, throttle)
+                        waypoints.append((lat, lng, throttle))
+            
+            # Detect if coordinates are relative
+            is_relative = False
+            if len(waypoints) > 1:
+                first_lat, first_lng, _ = waypoints[0]
+                second_lat, second_lng, _ = waypoints[1]
+                
+                # Check if the second point is within a small range (e.g., ±1 degree)
+                if abs(second_lat) < 1 and abs(second_lng) < 1:
+                    is_relative = True
+            
+            # Set the checkbox state based on detection
+            self.relative_checkbox.setChecked(is_relative)
+            
+            # Add waypoints
+            for i, (lat, lng, throttle) in enumerate(waypoints):
+                if is_relative and i > 0:
+                    if self.home_lat is None:
+                        self.home_lat, self.home_lng = waypoints[0][0], waypoints[0][1]
+                    lat += self.home_lat
+                    lng += self.home_lng
+                self.add_waypoint(lat, lng, throttle)
+            
             self.update_map_markers()
             print(f"Waypoints loaded from {file_name}")
+            if is_relative:
+                print("Detected relative coordinates.")
+            else:
+                print("Detected absolute coordinates.")
 
     def toggle_relative_coordinates(self):
         self.update_waypoint_display()
-        self.update_map_markers()
+        if self.waypoint_list.count() > 0:
+            self.update_map_markers()
 
     def update_waypoint_display(self):
         relative = self.relative_checkbox.isChecked()
