@@ -70,6 +70,11 @@
             alert("Location access denied or unavailable.");
         });
 
+        function getMapCenter() {
+            var center = map.getCenter();
+            return JSON.stringify({lat: center.lat, lng: center.lng});
+        }
+
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.bridge = channel.objects.bridge;
             
@@ -94,6 +99,17 @@
             window.updateMarkers = function(waypointsList) {
                 markers.forEach(marker => map.removeLayer(marker));
                 markers = [];
+                polyline.setLatLngs([]);
+
+                // Check if waypointsList is a string (JSON) or already an object
+                if (typeof waypointsList === 'string') {
+                    try {
+                        waypointsList = JSON.parse(waypointsList);
+                    } catch (e) {
+                        console.error("Error parsing waypointsList:", e);
+                        return;
+                    }
+                }
 
                 waypointsList.forEach((waypoint, index) => {
                     var marker = L.marker([waypoint.lat, waypoint.lng], {draggable: true, icon: createNumberedIcon(index + 1)}).addTo(map);
@@ -111,14 +127,15 @@
                 });
 
                 updatePolyline();
+                if (markers.length > 0) {
+                    map.fitBounds(L.latLngBounds(markers.map(m => m.getLatLng())));
+                }
             };
 
             function updatePolyline() {
-                if (map.hasLayer(polyline)) {
-                    map.removeLayer(polyline);
-                }
                 var latlngs = markers.map(marker => marker.getLatLng());
-                polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+                polyline.setLatLngs(latlngs);
+                polyline.addTo(map);
             }
         });
     </script>
