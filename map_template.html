@@ -36,6 +36,12 @@
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
         var locationMarker = null;
 
+        function initMap() {
+            map.addListener('idle', function() {
+                console.log("Map is idle, center:", map.getCenter().toString());
+            });
+        }
+
         function createNumberedIcon(number) {
             return L.divIcon({
                 className: 'custom-div-icon',
@@ -70,11 +76,20 @@
         map.on('locationerror', function(e) {
             alert("Location access denied or unavailable.");
         });
-
+        
         function getMapCenter() {
-            var center = map.getCenter();
-            return JSON.stringify({lat: center.lat, lng: center.lng});
+            if (typeof map !== 'undefined' && map) {
+                var center = map.getCenter();
+                return JSON.stringify({
+                    lat: center.lat,
+                    lng: center.lng
+                });
+            } else {
+                console.error("Map not initialized");
+                return null;
+            }
         }
+        window.addEventListener('load', initMap);
 
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.bridge = channel.objects.bridge;

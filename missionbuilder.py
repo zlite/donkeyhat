@@ -8,10 +8,11 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 from PySide6.QtCore import QUrl, QObject, Slot, Qt
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtCore import QTimer
 
 class CustomWebEnginePage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
-        print(f"JS: {message}")
+        print(f"JS Console ({level}): {message} [line {lineNumber}]")
 
 class Bridge(QObject):
     @Slot(float, float)
@@ -34,51 +35,53 @@ class WaypointWidget(QWidget):
         self.throttle_spinbox.setSingleStep(0.1)
         self.throttle_spinbox.setValue(throttle)
         self.throttle_spinbox.setDecimals(2)
-        self.throttle_spinbox.setFixedWidth(90)  # Set fixed width to 90
-        self.throttle_spinbox.setAlignment(Qt.AlignRight)  # Align text to the right
+        self.throttle_spinbox.setFixedWidth(90)
+        self.throttle_spinbox.setAlignment(Qt.AlignRight)
 
         self.layout.addWidget(self.number_label)
         self.layout.addWidget(self.coords_label, 1)
         self.layout.addWidget(QLabel("Throttle:"))
         self.layout.addWidget(self.throttle_spinbox)
 
-        self.lat = lat
-        self.lng = lng
+        self.abs_lat = lat
+        self.abs_lng = lng
+        self.rel_lat = 0
+        self.rel_lng = 0
+        self.is_relative = False
         self.update_coords(lat, lng)
 
     def update_number(self, number):
         self.number_label.setText(f"{number}.")
 
     def update_coords(self, lat, lng, relative=False, home_lat=None, home_lng=None):
-        self.lat = lat
-        self.lng = lng
+        self.is_relative = relative
         if relative and home_lat is not None and home_lng is not None:
-            dlat = lat - home_lat
-            dlng = lng - home_lng
-            dlat_m = dlat * 111139  # Convert degrees latitude to meters
-            dlng_m = dlng * 111139 * math.cos(math.radians(home_lat))  # Convert degrees longitude to meters
-            self.coords_label.setText(f"ΔLat: {dlat_m:.2f}m, ΔLng: {dlng_m:.2f}m")
+            self.rel_lat = lat  # lat is already in meters
+            self.rel_lng = lng  # lng is already in meters
+            self.abs_lat, self.abs_lng = self.meters_to_lat_lon(lat, lng, home_lat, home_lng)
+            self.coords_label.setText(f"ΔLat: {lat:.2f}m, ΔLng: {lng:.2f}m")
         else:
+            self.abs_lat = lat
+            self.abs_lng = lng
+            self.rel_lat = 0
+            self.rel_lng = 0
             self.coords_label.setText(f"Lat: {lat:.6f}, Lng: {lng:.6f}")
 
+    @staticmethod
+    def meters_to_lat_lon(dlat_m, dlng_m, home_lat, home_lng):
+        dlat = dlat_m / 111139
+        dlng = dlng_m / (111139 * math.cos(math.radians(home_lat)))
+        return home_lat + dlat, home_lng + dlng
+
     def get_data(self):
-        text = self.coords_label.text()
-        if "ΔLat" in text and "ΔLng" in text:
-            dlat_m = float(text.split(", ")[0].split(": ")[1][:-1])
-            dlng_m = float(text.split(", ")[1].split(": ")[1][:-1])
-            dlat = dlat_m / 111139
-            dlng = dlng_m / (111139 * math.cos(math.radians(self.lat)))
-            return {
-                "lat": self.lat,
-                "lng": self.lng,
-                "throttle": self.throttle_spinbox.value()
-            }
-        else:
-            return {
-                "lat": float(text.split(", ")[0].split(": ")[1]),
-                "lng": float(text.split(", ")[1].split(": ")[1]),
-                "throttle": self.throttle_spinbox.value()
-            }
+        return {
+            "abs_lat": self.abs_lat,
+            "abs_lng": self.abs_lng,
+            "rel_lat": self.rel_lat,
+            "rel_lng": self.rel_lng,
+            "is_relative": self.is_relative,
+            "throttle": self.throttle_spinbox.value()
+        }
 
 class WaypointCreator(QMainWindow):
     def __init__(self):
@@ -130,12 +133,19 @@ class WaypointCreator(QMainWindow):
         self.waypoints = []
         self.is_relative = False
 
+    def delay_init(self):
+        QTimer.singleShot(1000, self.post_map_init)
+
+    def post_map_init(self):
+        # Any initialization that needs to happen after the map is loaded
+        print("Map should be loaded now")
+        # You can add any necessary initialization here
+
     def init_map(self):
         self.channel = QWebChannel()
         self.bridge = Bridge()
         self.channel.registerObject('bridge', self.bridge)
 
-        # Set up QWebEngineProfile with relaxed security settings
         profile = QWebEngineProfile.defaultProfile()
         settings = profile.settings()
         settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
@@ -146,13 +156,23 @@ class WaypointCreator(QMainWindow):
         page = CustomWebEnginePage(profile, self.map_widget)
         page.setWebChannel(self.channel)
 
-        # Connect the permission request handler
         page.featurePermissionRequested.connect(self.handlePermissionRequest)
 
         self.map_widget.setPage(page)
 
         html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "map_template.html")
         self.map_widget.setUrl(QUrl.fromLocalFile(html_path))
+        self.delay_init()
+ 
+    def meters_to_lat_lon(self, dlat_m, dlng_m, home_lat, home_lng):
+        dlat = dlat_m / 111139
+        dlng = dlng_m / (111139 * math.cos(math.radians(home_lat)))
+        return home_lat + dlat, home_lng + dlng
+
+    def lat_lon_to_meters(self, lat, lng, home_lat, home_lng):
+        dlat_m = (lat - home_lat) * 111139
+        dlng_m = (lng - home_lng) * 111139 * math.cos(math.radians(home_lat))
+        return dlat_m, dlng_m
 
     def handlePermissionRequest(self, url, feature):
         if feature == QWebEnginePage.Geolocation:
@@ -161,42 +181,44 @@ class WaypointCreator(QMainWindow):
             self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
 
     def add_waypoint(self, lat, lng, throttle=0.2, is_relative=False):
-        if self.home_lat is None:
+        if self.waypoint_list.count() == 0:
             self.home_lat, self.home_lng = lat, lng
+            is_relative = False
         
-        if is_relative and self.home_lat is not None and self.home_lng is not None:
-            # Convert to relative coordinates
-            rel_lat = lat - self.home_lat
-            rel_lng = lng - self.home_lng
-            
-            # Convert to meters
-            rel_lat_m = rel_lat * 111139
-            rel_lng_m = rel_lng * 111139 * math.cos(math.radians(self.home_lat))
-            
-            waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
-            waypoint_widget.update_coords(lat, lng, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+        waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
+        
+        if is_relative:
+            rel_lat = (lat - self.home_lat) * 111139
+            rel_lng = (lng - self.home_lng) * 111139 * math.cos(math.radians(self.home_lat))
+            waypoint_widget.update_coords(rel_lat, rel_lng, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
         else:
-            waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
+            waypoint_widget.update_coords(lat, lng, relative=False)
         
         item = QListWidgetItem(self.waypoint_list)
         item.setSizeHint(waypoint_widget.sizeHint())
         self.waypoint_list.addItem(item)
         self.waypoint_list.setItemWidget(item, waypoint_widget)
         
-        if is_relative:
-            print(f"Relative waypoint added: ΔLat: {rel_lat_m:.2f}m, ΔLng: {rel_lng_m:.2f}m")
-        else:
-            print(f"Absolute waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")
-        
         self.update_map_markers()
 
     def update_waypoint(self, index, lat, lng):
         item = self.waypoint_list.item(index)
         waypoint_widget = self.waypoint_list.itemWidget(item)
-        waypoint_widget.update_coords(lat, lng)
+        
+        if index == 0:
+            # First waypoint is always absolute
+            waypoint_widget.update_coords(lat, lng, relative=False)
+            self.home_lat, self.home_lng = lat, lng
+        elif self.relative_checkbox.isChecked():
+            # Convert the new absolute position to relative
+            dlat_m, dlng_m = self.lat_lon_to_meters(lat, lng, self.home_lat, self.home_lng)
+            waypoint_widget.update_coords(dlat_m, dlng_m, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+        else:
+            waypoint_widget.update_coords(lat, lng, relative=False)
+        
         self.update_waypoint_display()
         self.update_map_markers()
-        print(f"Waypoint updated: Lat: {lat:.6f}, Lng: {lng:.6f}")
+        print(f"Waypoint {index + 1} updated: Lat: {lat:.6f}, Lng: {lng:.6f}")
 
     def on_waypoints_reordered(self):
         for i in range(self.waypoint_list.count()):
@@ -215,11 +237,15 @@ class WaypointCreator(QMainWindow):
 
     def update_map_markers(self):
         waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
-                     for i in range(self.waypoint_list.count())]
-        # Ensure throttle is a number, not a string
+                    for i in range(self.waypoint_list.count())]
+        map_waypoints = []
         for wp in waypoints:
-            wp['throttle'] = float(wp['throttle'])
-        self.map_widget.page().runJavaScript(f"updateMarkers({json.dumps(waypoints)});")
+            map_waypoints.append({
+                "lat": wp['abs_lat'],
+                "lng": wp['abs_lng'],
+                "throttle": float(wp['throttle'])
+            })
+        self.map_widget.page().runJavaScript(f"updateMarkers({json.dumps(map_waypoints)});")
 
     def save_waypoints(self):
         options = QFileDialog.Options()
@@ -227,15 +253,23 @@ class WaypointCreator(QMainWindow):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Waypoints", "donkey_path.csv", "CSV Files (*.csv)", options=options)
         if file_name:
             waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
-                         for i in range(self.waypoint_list.count())]
+                        for i in range(self.waypoint_list.count())]
             with open(file_name, 'w', newline='') as f:
                 writer = csv.writer(f)
+                writer.writerow(["Coordinate_Type", "Latitude", "Longitude", "Throttle"])
+                
                 for i, wp in enumerate(waypoints):
-                    if self.relative_checkbox.isChecked() and i > 0:
-                        lat, lng = self.get_relative_coords(wp['lat'], wp['lng'])
+                    if i == 0:
+                        coord_type = "ABSOLUTE"
+                        lat, lng = f"{wp['abs_lat']:.10f}", f"{wp['abs_lng']:.10f}"
+                    elif self.relative_checkbox.isChecked():
+                        coord_type = "RELATIVE"
+                        lat = f"REL:{wp['rel_lat']:.2f}"
+                        lng = f"REL:{wp['rel_lng']:.2f}"
                     else:
-                        lat, lng = wp['lat'], wp['lng']
-                    writer.writerow([lat, lng, wp['throttle']])
+                        coord_type = "ABSOLUTE"
+                        lat, lng = f"{wp['abs_lat']:.10f}", f"{wp['abs_lng']:.10f}"
+                    writer.writerow([coord_type, lat, lng, f"{wp['throttle']:.2f}"])
             print(f"Waypoints saved to {file_name}")
 
     def load_waypoints(self):
@@ -248,87 +282,157 @@ class WaypointCreator(QMainWindow):
             self.home_lng = None
             
             self.waypoints = []
+            self.is_relative = False
             with open(file_name, 'r') as f:
                 reader = csv.reader(f)
-                for row in reader:
-                    if len(row) == 3:
-                        lat, lng, throttle = float(row[0]), float(row[1]), float(row[2])
+                header = next(reader)  # Read the header row
+                if "Coordinate_Type" not in header:
+                    QMessageBox.warning(self, "Invalid File", "The selected file does not contain a valid header.")
+                    return
+
+                for i, row in enumerate(reader):
+                    if len(row) == 4:
+                        coord_type, lat, lng, throttle = row
+                        if i == 0:
+                            # First waypoint is always absolute
+                            lat, lng = float(lat), float(lng)
+                            self.home_lat, self.home_lng = lat, lng
+                        elif coord_type == "RELATIVE":
+                            self.is_relative = True
+                            lat = float(lat.split(':')[1])  # meters
+                            lng = float(lng.split(':')[1])  # meters
+                        else:
+                            lat, lng = float(lat), float(lng)
+                        throttle = float(throttle)
                         self.waypoints.append((lat, lng, throttle))
             
-            # Detect if coordinates are relative
-            self.is_relative = False
-            if len(self.waypoints) > 1:
-                first_lat, first_lng, _ = self.waypoints[0]
-                second_lat, second_lng, _ = self.waypoints[1]
-                
-                # Check if the second point is within a small range (e.g., ±1 degree)
-                if abs(second_lat) < 1 and abs(second_lng) < 1:
-                    self.is_relative = True
-            
-            # Set the checkbox state based on detection
             self.relative_checkbox.setChecked(self.is_relative)
-            
-            if self.is_relative:
-                QMessageBox.information(self, "Set Home Location", "Please set the home location using the 'Set Home to Map Center' button.")
-                self.process_absolute_waypoints(self.waypoints)
-            else:
-                self.process_absolute_waypoints(self.waypoints)
-                self.update_map_markers()
+            self.process_waypoints()
 
     def set_home_to_map_center(self):
         self.map_widget.page().runJavaScript("getMapCenter();", 0, self.on_map_center_received)
+        print("Requested map center")
+
+    def force_map_center_update(self):
+        js_code = "storeMapCenter();"
+        self.map_widget.page().runJavaScript(js_code)
 
     def on_map_center_received(self, result):
+        print(f"Received result: {result}")
         try:
+            if not result:
+                raise ValueError("Received empty result from JavaScript")
+
             center = json.loads(result)
-            new_home_lat, new_home_lng = center['lat'], center['lng']
+
+            if 'lat' not in center or 'lng' not in center:
+                raise KeyError(f"Expected 'lat' and 'lng' keys, but got: {center.keys()}")
+
+            new_home_lat, new_home_lng = float(center['lat']), float(center['lng'])
             print(f"New home set to: Lat: {new_home_lat:.6f}, Lng: {new_home_lng:.6f}")
             
-            if self.relative_checkbox.isChecked():
-                self.set_home_and_redraw_waypoints(new_home_lat, new_home_lng)
-            else:
-                self.home_lat, self.home_lng = new_home_lat, new_home_lng
+            self.set_home_and_redraw_waypoints(new_home_lat, new_home_lng)
                 
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
-            print(f"Received data: {result}")
+        except KeyError as e:
+            print(f"Error accessing data: {e}")
+        except ValueError as e:
+            print(f"Value error: {e}")
         except Exception as e:
-            print(f"Error processing map center: {e}")
+            print(f"Unexpected error: {e}")
+        finally:
+            print(f"Raw received data: {result}")
+
+    def on_map_center_received_fallback(self, result):
+        print(f"Fallback received result: {result}")
+        try:
+            center = json.loads(result)
+            new_home_lat, new_home_lng = float(center['lat']), float(center['lng'])
+            print(f"New home set to: Lat: {new_home_lat:.6f}, Lng: {new_home_lng:.6f}")
+            self.set_home_and_redraw_waypoints(new_home_lat, new_home_lng)
+        except Exception as e:
+            print(f"Error in fallback method: {e}")
 
     def set_home_and_redraw_waypoints(self, new_home_lat, new_home_lng):
-        if self.home_lat is None or self.home_lng is None:
-            self.home_lat, self.home_lng = new_home_lat, new_home_lng
+        if self.waypoint_list.count() == 0:
             return
 
-        # Calculate the offset between the old and new home positions
-        lat_offset = new_home_lat - self.home_lat
-        lng_offset = new_home_lng - self.home_lng
-
-        # Update the home position
+        old_home_lat, old_home_lng = self.home_lat, self.home_lng
         self.home_lat, self.home_lng = new_home_lat, new_home_lng
 
-        # Move all waypoints by the offset
+        # Update the first waypoint (home)
+        first_item = self.waypoint_list.item(0)
+        first_waypoint = self.waypoint_list.itemWidget(first_item)
+        first_waypoint.update_coords(new_home_lat, new_home_lng, relative=False)
+
+        # Update all other waypoints
+        for i in range(1, self.waypoint_list.count()):
+            item = self.waypoint_list.item(i)
+            waypoint_widget = self.waypoint_list.itemWidget(item)
+            data = waypoint_widget.get_data()
+            
+            if self.relative_checkbox.isChecked():
+                # Keep the relative offset
+                waypoint_widget.update_coords(data['rel_lat'], data['rel_lng'], relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+            else:
+                # Adjust absolute position
+                dlat = data['abs_lat'] - old_home_lat
+                dlng = data['abs_lng'] - old_home_lng
+                new_lat = new_home_lat + dlat
+                new_lng = new_home_lng + dlng
+                waypoint_widget.update_coords(new_lat, new_lng, relative=False)
+
+        self.update_waypoint_display()
+        self.update_map_markers()
+        print(f"Waypoints redrawn with new home location: Lat: {self.home_lat:.6f}, Lng: {self.home_lng:.6f}")
+
+    def process_waypoints(self):
+        if not self.waypoints:
+            return
+
+        # Clear existing waypoints
+        self.waypoint_list.clear()
+
+        # Process the first waypoint (always absolute)
+        first_wp = self.waypoints[0]
+        self.add_waypoint(first_wp[0], first_wp[1], first_wp[2], is_relative=False)
+        self.home_lat, self.home_lng = first_wp[0], first_wp[1]
+
+        # Process the rest of the waypoints
+        for lat, lng, throttle in self.waypoints[1:]:
+            if self.is_relative:
+                # lat and lng are already in meters for relative coordinates
+                abs_lat = self.home_lat + lat / 111139
+                abs_lng = self.home_lng + lng / (111139 * math.cos(math.radians(self.home_lat)))
+                self.add_waypoint(abs_lat, abs_lng, throttle, is_relative=True)
+            else:
+                self.add_waypoint(lat, lng, throttle, is_relative=False)
+
+        self.update_waypoint_display()
+
+    def toggle_relative_coordinates(self):
+        is_relative = self.relative_checkbox.isChecked()
+        if self.waypoint_list.count() > 0:
+            first_wp = self.waypoint_list.itemWidget(self.waypoint_list.item(0)).get_data()
+            self.home_lat, self.home_lng = first_wp['abs_lat'], first_wp['abs_lng']
+
         for i in range(self.waypoint_list.count()):
             item = self.waypoint_list.item(i)
             waypoint_widget = self.waypoint_list.itemWidget(item)
             data = waypoint_widget.get_data()
-            new_lat = data['lat'] + lat_offset
-            new_lng = data['lng'] + lng_offset
-            waypoint_widget.update_coords(new_lat, new_lng, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+            
+            if i == 0:
+                waypoint_widget.update_coords(data['abs_lat'], data['abs_lng'], relative=False)
+            else:
+                if is_relative:
+                    dlat_m, dlng_m = self.lat_lon_to_meters(data['abs_lat'], data['abs_lng'], self.home_lat, self.home_lng)
+                    waypoint_widget.update_coords(dlat_m, dlng_m, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+                else:
+                    waypoint_widget.update_coords(data['abs_lat'], data['abs_lng'], relative=False)
 
-        self.update_waypoint_display()
         self.update_map_markers()
-        print(f"Waypoints redrawn with new home location.")
-
-    def process_absolute_waypoints(self, waypoints):
-        for lat, lng, throttle in waypoints:
-            self.add_waypoint(lat, lng, throttle)
-        self.update_waypoint_display()
-        self.update_map_markers()
-
-    def toggle_relative_coordinates(self):
-        self.update_waypoint_display()
-        self.update_map_markers()
+        print(f"Toggled to {'relative' if is_relative else 'absolute'} coordinates")
 
     def update_waypoint_display(self):
         relative = self.relative_checkbox.isChecked()
@@ -336,23 +440,19 @@ class WaypointCreator(QMainWindow):
             item = self.waypoint_list.item(i)
             waypoint_widget = self.waypoint_list.itemWidget(item)
             data = waypoint_widget.get_data()
-            if relative and i > 0:
-                waypoint_widget.update_coords(data['lat'], data['lng'], relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+            if i == 0:
+                # First waypoint is always absolute
+                waypoint_widget.update_coords(data['abs_lat'], data['abs_lng'], relative=False)
+            elif relative:
+                waypoint_widget.update_coords(data['rel_lat'], data['rel_lng'], relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
             else:
-                waypoint_widget.update_coords(data['lat'], data['lng'])
-
-    def get_relative_coords(self, lat, lng):
-        dlat = lat - self.home_lat
-        dlng = lng - self.home_lng
-        return dlat, dlng
-
-    def get_absolute_coords(self, dlat, dlng):
-        lat = self.home_lat + dlat
-        lng = self.home_lng + dlng
-        return lat, lng
+                waypoint_widget.update_coords(data['abs_lat'], data['abs_lng'], relative=False)
+        
+        self.update_map_markers()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = WaypointCreator()
     window.show()
     sys.exit(app.exec())
+    
