@@ -3,10 +3,11 @@ import csv
 import os
 import math
 import json
-from PySide2.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel, QFileDialog, QCheckBox, QMessageBox
-from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
-from PySide2.QtCore import QUrl, QObject, Slot, Qt
-from PySide2.QtWebChannel import QWebChannel
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QListWidget, QListWidgetItem, QDoubleSpinBox, QLabel, QFileDialog, QCheckBox, QMessageBox
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
+from PySide6.QtCore import QUrl, QObject, Slot, Qt
+from PySide6.QtWebChannel import QWebChannel
 
 class CustomWebEnginePage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
@@ -15,7 +16,7 @@ class CustomWebEnginePage(QWebEnginePage):
 class Bridge(QObject):
     @Slot(float, float)
     def addWaypoint(self, lat, lng):
-        window.add_waypoint(lat, lng)
+        window.add_waypoint(lat, lng, is_relative=window.relative_checkbox.isChecked())
 
     @Slot(int, float, float)
     def updateWaypoint(self, index, lat, lng):
@@ -33,6 +34,8 @@ class WaypointWidget(QWidget):
         self.throttle_spinbox.setSingleStep(0.1)
         self.throttle_spinbox.setValue(throttle)
         self.throttle_spinbox.setDecimals(2)
+        self.throttle_spinbox.setFixedWidth(90)  # Set fixed width to 90
+        self.throttle_spinbox.setAlignment(Qt.AlignRight)  # Align text to the right
 
         self.layout.addWidget(self.number_label)
         self.layout.addWidget(self.coords_label, 1)
@@ -132,35 +135,59 @@ class WaypointCreator(QMainWindow):
         self.bridge = Bridge()
         self.channel.registerObject('bridge', self.bridge)
 
-        page = CustomWebEnginePage(self.map_widget)
-        page.profile().setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-        page.profile().setHttpAcceptLanguage("en-US,en;q=0.9")
-        page.profile().setPersistentCookiesPolicy(QWebEngineProfile.AllowPersistentCookies)
-        
+        # Set up QWebEngineProfile with relaxed security settings
+        profile = QWebEngineProfile.defaultProfile()
+        settings = profile.settings()
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+        settings.setAttribute(QWebEngineSettings.AllowGeolocationOnInsecureOrigins, True)
+        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+
+        page = CustomWebEnginePage(profile, self.map_widget)
+        page.setWebChannel(self.channel)
+
+        # Connect the permission request handler
+        page.featurePermissionRequested.connect(self.handlePermissionRequest)
+
         self.map_widget.setPage(page)
-        self.map_widget.page().setWebChannel(self.channel)
 
         html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "map_template.html")
         self.map_widget.setUrl(QUrl.fromLocalFile(html_path))
 
-        self.map_widget.page().featurePermissionRequested.connect(self.handlePermissionRequest)
-
     def handlePermissionRequest(self, url, feature):
-        if feature in (QWebEnginePage.Geolocation, QWebEnginePage.MediaAudioCapture, QWebEnginePage.MediaVideoCapture, QWebEnginePage.MediaAudioVideoCapture):
+        if feature == QWebEnginePage.Geolocation:
             self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionGrantedByUser)
         else:
             self.map_widget.page().setFeaturePermission(url, feature, QWebEnginePage.PermissionDeniedByUser)
 
-    def add_waypoint(self, lat, lng, throttle=0.2):
+    def add_waypoint(self, lat, lng, throttle=0.2, is_relative=False):
         if self.home_lat is None:
             self.home_lat, self.home_lng = lat, lng
         
-        waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
+        if is_relative and self.home_lat is not None and self.home_lng is not None:
+            # Convert to relative coordinates
+            rel_lat = lat - self.home_lat
+            rel_lng = lng - self.home_lng
+            
+            # Convert to meters
+            rel_lat_m = rel_lat * 111139
+            rel_lng_m = rel_lng * 111139 * math.cos(math.radians(self.home_lat))
+            
+            waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
+            waypoint_widget.update_coords(lat, lng, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+        else:
+            waypoint_widget = WaypointWidget(self.waypoint_list.count() + 1, lat, lng, throttle)
+        
         item = QListWidgetItem(self.waypoint_list)
         item.setSizeHint(waypoint_widget.sizeHint())
         self.waypoint_list.addItem(item)
         self.waypoint_list.setItemWidget(item, waypoint_widget)
-        print(f"Waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")
+        
+        if is_relative:
+            print(f"Relative waypoint added: ΔLat: {rel_lat_m:.2f}m, ΔLng: {rel_lng_m:.2f}m")
+        else:
+            print(f"Absolute waypoint added: Lat: {lat:.6f}, Lng: {lng:.6f}")
+        
         self.update_map_markers()
 
     def update_waypoint(self, index, lat, lng):
@@ -189,7 +216,10 @@ class WaypointCreator(QMainWindow):
     def update_map_markers(self):
         waypoints = [self.waypoint_list.itemWidget(self.waypoint_list.item(i)).get_data() 
                      for i in range(self.waypoint_list.count())]
-        self.map_widget.page().runJavaScript(f"updateMarkers({json.dumps(waypoints)})")
+        # Ensure throttle is a number, not a string
+        for wp in waypoints:
+            wp['throttle'] = float(wp['throttle'])
+        self.map_widget.page().runJavaScript(f"updateMarkers({json.dumps(waypoints)});")
 
     def save_waypoints(self):
         options = QFileDialog.Options()
@@ -251,36 +281,44 @@ class WaypointCreator(QMainWindow):
     def on_map_center_received(self, result):
         try:
             center = json.loads(result)
-            self.home_lat, self.home_lng = center['lat'], center['lng']
-            print(f"Home set to: Lat: {self.home_lat:.6f}, Lng: {self.home_lng:.6f}")
-            if self.is_relative:
-                self.set_home_and_redraw_waypoints()
+            new_home_lat, new_home_lng = center['lat'], center['lng']
+            print(f"New home set to: Lat: {new_home_lat:.6f}, Lng: {new_home_lng:.6f}")
+            
+            if self.relative_checkbox.isChecked():
+                self.set_home_and_redraw_waypoints(new_home_lat, new_home_lng)
+            else:
+                self.home_lat, self.home_lng = new_home_lat, new_home_lng
+                
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
             print(f"Received data: {result}")
         except Exception as e:
             print(f"Error processing map center: {e}")
 
-    def set_home_and_redraw_waypoints(self):
+    def set_home_and_redraw_waypoints(self, new_home_lat, new_home_lng):
         if self.home_lat is None or self.home_lng is None:
-            QMessageBox.warning(self, "Home Not Set", "Please set the home location first.")
+            self.home_lat, self.home_lng = new_home_lat, new_home_lng
             return
 
-        self.waypoint_list.clear()
-        
-        # Add the home waypoint first
-        self.add_waypoint(self.home_lat, self.home_lng, self.waypoints[0][2])  # Use the throttle from the first waypoint
-        
-        # Add the rest of the waypoints relative to home
-        for i in range(1, len(self.waypoints)):
-            rel_lat, rel_lng, throttle = self.waypoints[i]
-            abs_lat = self.home_lat + rel_lat
-            abs_lng = self.home_lng + rel_lng
-            self.add_waypoint(abs_lat, abs_lng, throttle)
-        
+        # Calculate the offset between the old and new home positions
+        lat_offset = new_home_lat - self.home_lat
+        lng_offset = new_home_lng - self.home_lng
+
+        # Update the home position
+        self.home_lat, self.home_lng = new_home_lat, new_home_lng
+
+        # Move all waypoints by the offset
+        for i in range(self.waypoint_list.count()):
+            item = self.waypoint_list.item(i)
+            waypoint_widget = self.waypoint_list.itemWidget(item)
+            data = waypoint_widget.get_data()
+            new_lat = data['lat'] + lat_offset
+            new_lng = data['lng'] + lng_offset
+            waypoint_widget.update_coords(new_lat, new_lng, relative=True, home_lat=self.home_lat, home_lng=self.home_lng)
+
         self.update_waypoint_display()
         self.update_map_markers()
-        print(f"Waypoints redrawn with relative coordinates. First waypoint set to home location.")
+        print(f"Waypoints redrawn with new home location.")
 
     def process_absolute_waypoints(self, waypoints):
         for lat, lng, throttle in waypoints:
@@ -317,4 +355,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = WaypointCreator()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

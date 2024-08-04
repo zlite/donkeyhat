@@ -12,6 +12,7 @@
         .leaflet-marker-icon { cursor: move; }
         .map-controls { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; }
         .location-button { position: absolute; bottom: 10px; right: 10px; background: white; border: none; cursor: pointer; font-size: 24px; color: #007bff; z-index: 1000; width: 30px; height: 30px; border-radius: 4px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 5px rgba(0,0,0,0.65); }
+        .popup-content { min-width: 200px; }
     </style>
 </head>
 <body>
@@ -101,18 +102,12 @@
                 markers = [];
                 polyline.setLatLngs([]);
 
-                // Check if waypointsList is a string (JSON) or already an object
-                if (typeof waypointsList === 'string') {
-                    try {
-                        waypointsList = JSON.parse(waypointsList);
-                    } catch (e) {
-                        console.error("Error parsing waypointsList:", e);
-                        return;
-                    }
-                }
-
                 waypointsList.forEach((waypoint, index) => {
-                    var marker = L.marker([waypoint.lat, waypoint.lng], {draggable: true, icon: createNumberedIcon(index + 1)}).addTo(map);
+                    var marker = L.marker([waypoint.lat, waypoint.lng], {
+                        draggable: true, 
+                        icon: createNumberedIcon(index + 1)
+                    }).addTo(map);
+                    
                     markers.push(marker);
 
                     marker.on('dragstart', function(event) {
@@ -124,6 +119,16 @@
                         window.bridge.updateWaypoint(index, position.lat, position.lng);
                         updatePolyline();
                     });
+
+                    // Update the popup content to display the throttle
+                    marker.bindPopup(`
+                        <div class="popup-content">
+                            <b>Waypoint ${index + 1}</b><br>
+                            Lat: ${waypoint.lat.toFixed(6)}<br>
+                            Lng: ${waypoint.lng.toFixed(6)}<br>
+                            <span style="display: inline-block; min-width: 70px;">Throttle: ${waypoint.throttle.toFixed(2)}</span>
+                        </div>
+                    `);
                 });
 
                 updatePolyline();
