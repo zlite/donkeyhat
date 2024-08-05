@@ -162,7 +162,6 @@ class WaypointCreator(QMainWindow):
 
         html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "map_template.html")
         self.map_widget.setUrl(QUrl.fromLocalFile(html_path))
-        self.delay_init()
  
     def meters_to_lat_lon(self, dlat_m, dlng_m, home_lat, home_lng):
         dlat = dlat_m / 111139
@@ -256,20 +255,16 @@ class WaypointCreator(QMainWindow):
                         for i in range(self.waypoint_list.count())]
             with open(file_name, 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(["Coordinate_Type", "Latitude", "Longitude", "Throttle"])
-                
                 for i, wp in enumerate(waypoints):
-                    if i == 0:
-                        coord_type = "ABSOLUTE"
-                        lat, lng = f"{wp['abs_lat']:.10f}", f"{wp['abs_lng']:.10f}"
-                    elif self.relative_checkbox.isChecked():
-                        coord_type = "RELATIVE"
-                        lat = f"REL:{wp['rel_lat']:.2f}"
-                        lng = f"REL:{wp['rel_lng']:.2f}"
+                    if i == 0 or not self.relative_checkbox.isChecked():
+                        # Absolute coordinates: 10 decimal places
+                        lat = f"{wp['abs_lat']:.10f}"
+                        lng = f"{wp['abs_lng']:.10f}"
                     else:
-                        coord_type = "ABSOLUTE"
-                        lat, lng = f"{wp['abs_lat']:.10f}", f"{wp['abs_lng']:.10f}"
-                    writer.writerow([coord_type, lat, lng, f"{wp['throttle']:.2f}"])
+                        # Relative coordinates: 2 decimal places
+                        lat = f"{wp['rel_lat']:.2f}"
+                        lng = f"{wp['rel_lng']:.2f}"
+                    writer.writerow([lat, lng, f"{wp['throttle']:.2f}"])
             print(f"Waypoints saved to {file_name}")
 
     def load_waypoints(self):
@@ -285,32 +280,42 @@ class WaypointCreator(QMainWindow):
             self.is_relative = False
             with open(file_name, 'r') as f:
                 reader = csv.reader(f)
-                header = next(reader)  # Read the header row
-                if "Coordinate_Type" not in header:
-                    QMessageBox.warning(self, "Invalid File", "The selected file does not contain a valid header.")
-                    return
-
                 for i, row in enumerate(reader):
-                    if len(row) == 4:
-                        coord_type, lat, lng, throttle = row
+                    if len(row) == 3:
+                        lat, lng, throttle = row
                         if i == 0:
                             # First waypoint is always absolute
                             lat, lng = float(lat), float(lng)
                             self.home_lat, self.home_lng = lat, lng
-                        elif coord_type == "RELATIVE":
+                        elif '.' in lat and len(lat.split('.')[1]) <= 2:
+                            # Relative coordinates have 2 or fewer decimal places
                             self.is_relative = True
-                            lat = float(lat.split(':')[1])  # meters
-                            lng = float(lng.split(':')[1])  # meters
+                            lat, lng = float(lat), float(lng)
                         else:
+                            # Absolute coordinates
                             lat, lng = float(lat), float(lng)
                         throttle = float(throttle)
                         self.waypoints.append((lat, lng, throttle))
             
             self.relative_checkbox.setChecked(self.is_relative)
             self.process_waypoints()
-
     def set_home_to_map_center(self):
-        self.map_widget.page().runJavaScript("getMapCenter();", 0, self.on_map_center_received)
+        js_code = """
+        (function() {
+            var map = getOrInitMap();
+            if (map) {
+                var center = map.getCenter();
+                return JSON.stringify({
+                    lat: center.lat,
+                    lng: center.lng
+                });
+            } else {
+                console.error("Map not initialized");
+                return null;
+            }
+        })();
+        """
+        self.map_widget.page().runJavaScript(js_code, 0, self.on_map_center_received)
         print("Requested map center")
 
     def force_map_center_update(self):
@@ -402,7 +407,7 @@ class WaypointCreator(QMainWindow):
         # Process the rest of the waypoints
         for lat, lng, throttle in self.waypoints[1:]:
             if self.is_relative:
-                # lat and lng are already in meters for relative coordinates
+                # Convert relative meters to absolute coordinates
                 abs_lat = self.home_lat + lat / 111139
                 abs_lng = self.home_lng + lng / (111139 * math.cos(math.radians(self.home_lat)))
                 self.add_waypoint(abs_lat, abs_lng, throttle, is_relative=True)

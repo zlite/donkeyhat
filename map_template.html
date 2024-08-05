@@ -35,12 +35,43 @@
         var markers = [];
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
         var locationMarker = null;
+        var map;
 
         function initMap() {
-            map.addListener('idle', function() {
-                console.log("Map is idle, center:", map.getCenter().toString());
+            if (map) {
+                console.log("Map already initialized");
+                return;
+            }
+
+            map = L.map('map').setView([37.7749, -122.4194], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    var bridge = channel.objects.bridge;
+                    bridge.addWaypoint(e.latlng.lat, e.latlng.lng);
+                });
             });
+
+            map.on('moveend', function() {
+                console.log("Map moved, center:", map.getCenter());
+            });
+
+            console.log("Map initialized");
         }
+
+        // Use this function to safely initialize or get the map
+        function getOrInitMap() {
+            if (!map) {
+                initMap();
+            }
+            return map;
+        }
+
+        // Instead of calling initMap directly, use:
+        window.addEventListener('load', getOrInitMap);
 
         function createNumberedIcon(number) {
             return L.divIcon({
@@ -89,7 +120,7 @@
                 return null;
             }
         }
-        window.addEventListener('load', initMap);
+
 
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.bridge = channel.objects.bridge;
