@@ -29,7 +29,7 @@
 
         var googleSatLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
             attribution: '&copy; <a href="https://www.google.com/intl/en_us/help/terms_maps.html">Google</a>',
-            maxZoom: 20
+            maxZoom: 21
         });
 
         var markers = [];
@@ -43,9 +43,12 @@
                 return;
             }
 
+        function initMap() {
             map = L.map('map').setView([37.7749, -122.4194], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
+
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 21
             }).addTo(map);
 
             map.on('click', function(e) {
@@ -60,8 +63,8 @@
             });
 
             console.log("Map initialized");
+            }
         }
-
         // Use this function to safely initialize or get the map
         function getOrInitMap() {
             if (!map) {
