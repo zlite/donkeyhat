@@ -15,7 +15,7 @@ import rotaryio
 
 # Customisation variables
 DEBUG = False
-USB_SERIAL = True
+USB_SERIAL = False
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
@@ -210,29 +210,29 @@ def main():
             data[len(data):len(data)] = byte
             datastr = ''.join([chr(c) for c in data]).strip()
 
-        # if we make it here, there is serial data from the previous step
-        if len(datastr) >= 10:
-            steering_val = steering.value
-            throttle_val = throttle.value
-            try:
-                steering_val = int(datastr[:4])
-                throttle_val = int(datastr[-4:])
-            except ValueError:
-                None
+            # if we make it here, there is serial data from the previous step
+            if len(datastr) >= 10:
+                steering_val = steering.value
+                throttle_val = throttle.value
+                try:
+                    steering_val = int(datastr[:4])
+                    throttle_val = int(datastr[-4:])
+                except ValueError:
+                    None
 
-            data = bytearray()
-            datastr = ''
-            last_input = time.monotonic()
-            print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+                data = bytearray()
+                datastr = ''
+                last_input = time.monotonic()
+                print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
 
-        if last_input + 10 < time.monotonic():
-            # set the servo for RC control
-            steering.servo.duty_cycle = servo_duty_cycle(steering.value)
-            throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
-        else:
-            # set the servo for serial data (received)
-            steering.servo.duty_cycle = servo_duty_cycle(steering_val)
-            throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
+            if last_input + 10 < time.monotonic():
+                # set the servo for RC control
+                steering.servo.duty_cycle = servo_duty_cycle(steering.value)
+                throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
+            else:
+                # set the servo for serial data (received)
+                steering.servo.duty_cycle = servo_duty_cycle(steering_val)
+                throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
 
 def handle_command(command):
     global position1, position2, continuous_mode, continuous_delay
