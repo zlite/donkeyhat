@@ -20,6 +20,7 @@ SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
 
+
 # Pin assignments
 RC1 = board.GP27
 RC2 = board.GP26
@@ -63,7 +64,7 @@ def servo_duty_cycle(pulse_ms, frequency=60):
 
 def state_changed(control):
     """
-    Reads the RC channel and smooths value
+    Reads the RC channel and smoothes value
     """
     control.channel.pause()
     for i in range(0, len(control.channel)):
@@ -131,7 +132,7 @@ def main():
 
     while True:
         current_time = time.monotonic()
-
+        got_data = False
         if USE_QUADRATURE:
             # Read the positions from the quadrature encoders
             position1 = encoder1.position
@@ -197,7 +198,8 @@ def main():
             # if no data, break and continue with RC control
             if byte is None:
                 break
-            last_input = time.monotonic()
+
+
 
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
@@ -222,17 +224,20 @@ def main():
 
                 data = bytearray()
                 datastr = ''
-                last_input = time.monotonic()
-                print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+                got_data = True
+ #               print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+        if got_data:
+            print("Serial control")
+            # Set the servo for serial data (received)
+            steering.servo.duty_cycle = servo_duty_cycle(steering_val)
+            throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
+            last_input = time.monotonic()  # Only update here when serial data is received
+        elif time.monotonic() > (last_input + 0.1):  # Timeout to switch back to RC control
+            print("RC control")
+            # Set the servo for RC control
+            steering.servo.duty_cycle = servo_duty_cycle(steering.value)
+            throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
 
-            if last_input + 10 < time.monotonic():
-                # set the servo for RC control
-                steering.servo.duty_cycle = servo_duty_cycle(steering.value)
-                throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
-            else:
-                # set the servo for serial data (received)
-                steering.servo.duty_cycle = servo_duty_cycle(steering_val)
-                throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
 
 def handle_command(command):
     global position1, position2, continuous_mode, continuous_delay
