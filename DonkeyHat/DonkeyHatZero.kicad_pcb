@@ -2881,10 +2881,11 @@
 				(justify mirror)
 			)
 		)
-		(pad "1" thru_hole rect
+		(pad "1" thru_hole oval
 			(at 0 0)
 			(size 1.7 1.7)
 			(drill 1)
+			(property pad_prop_castellated)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net 59 "Net-(J2-Pin_1)")
@@ -3128,10 +3129,11 @@
 				(justify mirror)
 			)
 		)
-		(pad "1" thru_hole rect
+		(pad "1" thru_hole oval
 			(at 0 0)
 			(size 1.7 1.7)
 			(drill 1)
+			(property pad_prop_castellated)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net 1 "GND")
@@ -3375,10 +3377,11 @@
 				(justify mirror)
 			)
 		)
-		(pad "1" thru_hole rect
+		(pad "1" thru_hole oval
 			(at 0 0)
 			(size 1.7 1.7)
 			(drill 1)
+			(property pad_prop_castellated)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
 			(net 60 "Net-(J2-Pin_2)")
@@ -3622,13 +3625,13 @@
 				(justify mirror)
 			)
 		)
-		(pad "1" thru_hole rect
+		(pad "" thru_hole oval
 			(at 0 0)
 			(size 1.7 1.7)
 			(drill 1)
+			(property pad_prop_castellated)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net 26 "+5V")
 			(pinfunction "Pin_1")
 			(pintype "passive")
 			(uuid "df717ab2-3b37-4e06-a137-6fec99b0e4f2")
