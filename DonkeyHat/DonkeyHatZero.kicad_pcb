@@ -2908,7 +2908,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 		(layer "B.Cu")
 		(uuid "45ad35fa-0824-4f7c-ac0c-ca8473e3a798")
-		(at 158.42 67.95)
+		(at 150 68)
 		(descr "Through hole straight pin header, 1x01, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x01 2.54mm single row")
 		(property "Reference" "J8"
@@ -3155,7 +3155,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 		(layer "B.Cu")
 		(uuid "91f005a3-5c5a-4ea3-b709-13f4d69e7ea2")
-		(at 150.8 56.82)
+		(at 150 56.82)
 		(descr "Through hole straight pin header, 1x01, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x01 2.54mm single row")
 		(property "Reference" "J6"
@@ -3402,7 +3402,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
 		(layer "B.Cu")
 		(uuid "abce79ac-46bb-4072-aa22-d863e9bcfcac")
-		(at 150.8 67.69)
+		(at 158.5 68)
 		(descr "Through hole straight pin header, 1x01, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x01 2.54mm single row")
 		(property "Reference" "J7"
@@ -3739,6 +3739,18 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "Batt"
+		(at 160.9 59.5 90)
+		(layer "F.SilkS")
+		(uuid "578e4800-b651-4c7f-b8a9-219ea539635b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "S  +  -"
 		(at 105.55 60.58 90)
 		(layer "F.SilkS")
@@ -3748,6 +3760,42 @@
 				(size 1 1)
 				(thickness 0.25)
 				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "-   +"
+		(at 161.6 60.3 90)
+		(layer "F.SilkS")
+		(uuid "aa91999b-f9e3-4f10-b63c-8adc3ed13625")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Car"
+		(at 161 69.4 90)
+		(layer "F.SilkS")
+		(uuid "d5546c29-0dca-4d10-b7d4-7b0e890ce5a2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "-   +"
+		(at 161.6 70.6 90)
+		(layer "F.SilkS")
+		(uuid "e96a737f-14f7-4c8c-896c-5a6677ea1e20")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
 			)
 			(justify left bottom)
 		)

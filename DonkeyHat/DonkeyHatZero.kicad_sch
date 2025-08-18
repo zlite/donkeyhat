@@ -2701,7 +2701,7 @@
 	)
 	(wire
 		(pts
-			(xy 121.92 29.21) (xy 133.35 29.21)
+			(xy 121.92 29.21) (xy 139.7 29.21)
 		)
 		(stroke
 			(width 0)
@@ -2881,7 +2881,7 @@
 	)
 	(wire
 		(pts
-			(xy 133.35 29.21) (xy 133.35 43.18)
+			(xy 139.7 29.21) (xy 139.7 43.18)
 		)
 		(stroke
 			(width 0)
@@ -2961,7 +2961,7 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 43.18) (xy 133.35 43.18)
+			(xy 116.84 43.18) (xy 139.7 43.18)
 		)
 		(stroke
 			(width 0)
@@ -4340,6 +4340,69 @@
 			(project "DonkeyHatZero"
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
 					(reference "J5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 127 35.56 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "53c0f764-43bb-4384-ae6e-a6323f3c3357")
+		(property "Reference" "#PWR07"
+			(at 133.35 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 131.3244 35.4457 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 127 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 127 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 127 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5cf723b7-be00-4714-99a3-1c66297a3f3f")
+		)
+		(instances
+			(project "DonkeyHatZero"
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
+					(reference "#PWR07")
 					(unit 1)
 				)
 			)
