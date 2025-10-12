@@ -2538,12 +2538,6 @@
 		(uuid "36e2c557-2c2a-4fba-9b6f-1167ab8ec281")
 	)
 	(junction
-		(at 121.92 35.56)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "3604e331-f8ed-4bc3-b5cf-32376b265ab0")
-	)
-	(junction
 		(at 121.92 25.4)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2578,16 +2572,6 @@
 			(type default)
 		)
 		(uuid "0706fddf-8341-4bbd-9f68-457a16fb9615")
-	)
-	(wire
-		(pts
-			(xy 154.94 62.23) (xy 162.56 62.23)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "070b3428-8829-4baf-aec6-51bbb2ee9af6")
 	)
 	(wire
 		(pts
@@ -2651,6 +2635,26 @@
 	)
 	(wire
 		(pts
+			(xy 151.13 62.23) (xy 162.56 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2bdaa09a-d61a-427b-a6d6-a8c21a471ee9")
+	)
+	(wire
+		(pts
+			(xy 139.7 45.72) (xy 116.84 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2be73e5a-2b4a-491d-875f-02c399aea97c")
+	)
+	(wire
+		(pts
 			(xy 85.09 24.13) (xy 96.52 24.13)
 		)
 		(stroke
@@ -2678,16 +2682,6 @@
 			(type solid)
 		)
 		(uuid "37ae508e-6121-46a7-8162-5c727675dd10")
-	)
-	(wire
-		(pts
-			(xy 121.92 35.56) (xy 121.92 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3e0c48bb-abfc-4bd3-b815-036c7d374c3a")
 	)
 	(wire
 		(pts
@@ -2821,16 +2815,6 @@
 	)
 	(wire
 		(pts
-			(xy 154.94 83.82) (xy 162.56 83.82)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "842ddf71-47a3-4dd5-8504-d504ebedbbcd")
-	)
-	(wire
-		(pts
 			(xy 31.75 35.56) (xy 60.96 35.56)
 		)
 		(stroke
@@ -2848,6 +2832,26 @@
 			(type solid)
 		)
 		(uuid "8b129051-97ca-49cd-adf8-4efb5043fabb")
+	)
+	(wire
+		(pts
+			(xy 116.84 43.18) (xy 123.19 43.18)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8b7ef28d-c151-472e-90e4-ff4027996f53")
+	)
+	(wire
+		(pts
+			(xy 151.13 62.23) (xy 151.13 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "96756588-836b-4f03-b4d0-344637a5e01c")
 	)
 	(wire
 		(pts
@@ -2881,23 +2885,13 @@
 	)
 	(wire
 		(pts
-			(xy 139.7 29.21) (xy 139.7 43.18)
+			(xy 139.7 29.21) (xy 139.7 45.72)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "a908f83d-7224-4d18-9f35-f2fc8a8a5f0a")
-	)
-	(wire
-		(pts
-			(xy 121.92 45.72) (xy 116.84 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "acee164a-376a-4e06-8c9f-4dc1044ae954")
 	)
 	(wire
 		(pts
@@ -2961,16 +2955,6 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 43.18) (xy 139.7 43.18)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cf0b2d34-2d8c-46f1-860b-c141f4aadfb4")
-	)
-	(wire
-		(pts
 			(xy 200.66 92.71) (xy 200.66 93.98)
 		)
 		(stroke
@@ -2991,6 +2975,26 @@
 	)
 	(wire
 		(pts
+			(xy 123.19 35.56) (xy 127 35.56)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "df8b218f-0922-4f44-a185-56139fd5d215")
+	)
+	(wire
+		(pts
+			(xy 151.13 83.82) (xy 162.56 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e0393c6e-f8c1-4e45-a497-c00dcd6e4b8e")
+	)
+	(wire
+		(pts
 			(xy 73.66 38.1) (xy 90.17 38.1)
 		)
 		(stroke
@@ -2998,6 +3002,16 @@
 			(type default)
 		)
 		(uuid "ea040d83-4b06-4567-b87e-f29c6ad8ca67")
+	)
+	(wire
+		(pts
+			(xy 123.19 43.18) (xy 123.19 35.56)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "efb70ed3-383c-4f0b-a8ed-2512c5b8837f")
 	)
 	(wire
 		(pts
@@ -4598,132 +4612,6 @@
 			(project "DonkeyHat"
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
 					(reference "U2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 154.94 62.23 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "6fbac70a-47fa-4c78-85ca-80e34bad985e")
-		(property "Reference" "#PWR16"
-			(at 158.75 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "Batt"
-			(at 150.6156 61.8617 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 154.94 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 154.94 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 154.94 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "0bafd47d-8e7a-483e-ac05-dd89940b90f6")
-		)
-		(instances
-			(project "DonkeyHat"
-				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
-					(reference "#PWR16")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 154.94 83.82 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "75778b86-f2b3-4ba2-8e54-cb43a3526359")
-		(property "Reference" "#PWR08"
-			(at 158.75 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "Batt"
-			(at 150.6156 83.4517 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 154.94 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 154.94 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 154.94 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "3701df82-e45c-46ac-99af-3ed19445ce0b")
-		)
-		(instances
-			(project "DonkeyHatZero"
-				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55"
-					(reference "#PWR08")
 					(unit 1)
 				)
 			)
