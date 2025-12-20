@@ -1,5 +1,5 @@
 # Donkey Car Driver for 2040-based boards
-# Refactored for stability and non-blocking I/O
+# Refactored for stability, non-blocking I/O, and LED heartbeat
 import time
 import board
 import busio
@@ -12,7 +12,7 @@ import rotaryio
 # Customisation variables
 DEBUG = False
 USB_SERIAL = False
-SMOOTHING_INTERVAL_IN_S = 0.020 # Slightly faster update
+SMOOTHING_INTERVAL_IN_S = 0.020 
 USE_QUADRATURE = False 
 
 # Pin assignments
@@ -37,17 +37,14 @@ pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 if USB_SERIAL: DEBUG = False
 
 def servo_duty_cycle(pulse_ms, frequency=50):
-    """Calculates duty cycle for 16-bit PWM."""
     period_ms = 1000.0 / frequency
     duty_cycle = int((pulse_ms / 1000.0) / (period_ms / 65535.0))
-    return max(0, min(65535, duty_cycle)) # Safety clamp
+    return max(0, min(65535, duty_cycle))
 
 def state_changed(control):
-    """Reads latest RC value without blocking on old buffer data."""
     if len(control.channel) > 0:
-        val = control.channel[-1] # Get most recent pulse
+        val = control.channel[-1] 
         if 900 <= val <= 2100:
-            # Low-pass filter to smooth jitter
             control.value = (control.value * 0.7) + (val * 0.3)
             if 1480 < control.value < 1520:
                 control.value = 1500
@@ -59,7 +56,7 @@ class Control:
         self.servo.duty_cycle = servo_duty_cycle(value)
 
 # Communication and PWM Setup
-uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0) # Zero timeout for non-blocking
+uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0) 
 steering_pwm = PWMOut(Steering, duty_cycle=0, frequency=50)
 throttle_pwm = PWMOut(Throttle, duty_cycle=0, frequency=50)
 
@@ -78,7 +75,7 @@ datastr = ""
 
 def main():
     global last_update, continuous_mode, continuous_delay, position1, position2, datastr
-    last_toggle_time = time.monotonic()
+    last_led_toggle = time.monotonic()
     last_input = 0
     led_state = False
     
@@ -88,6 +85,13 @@ def main():
     while True:
         current_time = time.monotonic()
         
+        # --- Heartbeat LED (Blue flash every 0.5s) ---
+        if current_time - last_led_toggle >= 0.5:
+            led_state = not led_state
+            pixel.fill((0, 0, 255) if led_state else (0, 0, 0))
+            pixel.show()
+            last_led_toggle = current_time
+
         # --- Encoder Logic ---
         if USE_QUADRATURE:
             position1, position2 = encoder1.position, encoder2.position
@@ -97,34 +101,24 @@ def main():
             if curr2 != last_state2 and not curr2: position2 += 1
             last_state1, last_state2 = curr1, curr2
 
-        # --- Continuous Reporting ---
-        if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
-            uart.write(f"{int(steering.value)}, {int(throttle.value)}, {position1}, {int(current_time*1000)}\r\n".encode())
-            last_toggle_time = current_time
-
-        # --- RC Smoothing & Logic ---
+        # --- RC Smoothing & Serial Out ---
         if current_time - last_update >= SMOOTHING_INTERVAL_IN_S:
             if len(throttle.channel): state_changed(throttle)
-            if len(steering.channel): state_changed(steering)
+            if len(steering_channel): state_changed(steering)
             
             if not USB_SERIAL:
                 uart.write(f"{int(steering.value)}, {int(throttle.value)}\r\n".encode())
-            else:
-                print(f"{int(steering.value)}, {int(throttle.value)}")
-            
             last_update = current_time
 
         # --- Non-Blocking UART Read ---
-        # Read up to 32 bytes then yield to keep the loop moving
         incoming = uart.read(32)
         if incoming:
             for b in incoming:
                 char = chr(b)
-                if char == '\r' or char == '\n':
+                if char in ('\r', '\n'):
                     if datastr:
-                        handle_command(datastr.strip())
-                        # Check if command was a steering/throttle override
-                        if len(datastr) >= 8 and datastr[0].isdigit():
+                        # Process steering/throttle command (e.g., "15001500")
+                        if len(datastr) >= 8 and datastr[:1].isdigit():
                             try:
                                 s_val = int(datastr[:4])
                                 t_val = int(datastr[-4:])
@@ -137,20 +131,9 @@ def main():
                     datastr += char
 
         # --- Control Handover ---
-        # If no serial override in last 100ms, use RC values
         if current_time > (last_input + 0.1):
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
-
-def handle_command(command):
-    global position1, position2, continuous_mode, continuous_delay
-    if command == 'r':
-        position1 = position2 = 0
-        if USE_QUADRATURE: encoder1.position = encoder2.position = 0
-    elif command == 'p':
-        uart.write(f"POS: {position1}, {position2}\r\n".encode())
-    elif command.startswith('c'):
-        continuous_mode = not continuous_mode
 
 print("Donkey Driver Ready!")
 main()
