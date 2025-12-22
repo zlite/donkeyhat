@@ -1,5 +1,5 @@
 # Donkey Car Driver for 2040-based boards
-# Refactored for stability, non-blocking I/O, and LED heartbeat
+
 import time
 import board
 import busio
@@ -36,7 +36,7 @@ else:
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 if USB_SERIAL: DEBUG = False
 
-def servo_duty_cycle(pulse_ms, frequency=50):
+def servo_duty_cycle(pulse_ms, frequency=60): # Restored to 60Hz per oldcode.py
     period_ms = 1000.0 / frequency
     duty_cycle = int((pulse_ms / 1000.0) / (period_ms / 65535.0))
     return max(0, min(65535, duty_cycle))
@@ -45,6 +45,7 @@ def state_changed(control):
     if len(control.channel) > 0:
         val = control.channel[-1] 
         if 900 <= val <= 2100:
+            # EMA Smoothing from newcode.py
             control.value = (control.value * 0.7) + (val * 0.3)
             if 1480 < control.value < 1520:
                 control.value = 1500
@@ -57,8 +58,8 @@ class Control:
 
 # Communication and PWM Setup
 uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0) 
-steering_pwm = PWMOut(Steering, duty_cycle=0, frequency=50)
-throttle_pwm = PWMOut(Throttle, duty_cycle=0, frequency=50)
+steering_pwm = PWMOut(Steering, duty_cycle=0, frequency=60)
+throttle_pwm = PWMOut(Throttle, duty_cycle=0, frequency=60)
 
 steering_channel = PulseIn(RC1, maxlen=64, idle_state=0)
 throttle_channel = PulseIn(RC2, maxlen=64, idle_state=0)
@@ -73,9 +74,39 @@ continuous_delay = 0
 position1, position2 = 0, 0
 datastr = ""
 
+def handle_command(command):
+    """Restored command processing logic"""
+    global position1, position2, continuous_mode, continuous_delay
+    command = command.strip()
+    
+    if command == 'r':
+        position1, position2 = 0, 0
+        if USE_QUADRATURE:
+            encoder1.position = 0
+            encoder2.position = 0
+        print("Positions reset")
+        
+    elif command == 'p':
+        send_telemetry()
+        
+    elif command.startswith('c'):
+        if len(command) > 1 and command[1:].isdigit():
+            continuous_delay = int(command[1:])
+            continuous_mode = True
+        else:
+            continuous_mode = not continuous_mode
+        print(f"Continuous: {continuous_mode}")
+
+def send_telemetry():
+    """Helper to format and send encoder/RC data"""
+    now_ms = int(time.monotonic() * 1000)
+    msg = f"{int(steering.value)}, {int(throttle.value)}, {position1}, {now_ms}; {position2}, {now_ms}\r\n"
+    uart.write(msg.encode())
+
 def main():
     global last_update, continuous_mode, continuous_delay, position1, position2, datastr
     last_led_toggle = time.monotonic()
+    last_continuous_send = time.monotonic()
     last_input = 0
     led_state = False
     
@@ -85,7 +116,7 @@ def main():
     while True:
         current_time = time.monotonic()
         
-        # --- Heartbeat LED (Blue flash every 0.5s) ---
+        # --- Heartbeat LED ---
         if current_time - last_led_toggle >= 0.5:
             led_state = not led_state
             pixel.fill((0, 0, 255) if led_state else (0, 0, 0))
@@ -107,18 +138,24 @@ def main():
             if len(steering_channel): state_changed(steering)
             
             if not USB_SERIAL:
+                # Standard RC update back to Pi
                 uart.write(f"{int(steering.value)}, {int(throttle.value)}\r\n".encode())
             last_update = current_time
 
-        # --- Non-Blocking UART Read ---
+        # --- Continuous Telemetry Mode ---
+        if continuous_mode and (current_time - last_continuous_send >= continuous_delay / 1000.0):
+            send_telemetry()
+            last_continuous_send = current_time
+
+        # --- Non-Blocking UART Read & Command Handling ---
         incoming = uart.read(32)
         if incoming:
             for b in incoming:
                 char = chr(b)
                 if char in ('\r', '\n'):
                     if datastr:
-                        # Process steering/throttle command (e.g., "15001500")
-                        if len(datastr) >= 8 and datastr[:1].isdigit():
+                        # Check if it's a numeric steering/throttle command or a text command
+                        if len(datastr) >= 8 and datastr[0].isdigit():
                             try:
                                 s_val = int(datastr[:4])
                                 t_val = int(datastr[-4:])
@@ -126,6 +163,8 @@ def main():
                                 throttle.servo.duty_cycle = servo_duty_cycle(t_val)
                                 last_input = current_time
                             except ValueError: pass
+                        else:
+                            handle_command(datastr)
                     datastr = ""
                 else:
                     datastr += char
@@ -135,5 +174,5 @@ def main():
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
 
-print("Donkey Driver Ready!")
+print("Donkey Driver Ready with Encoders!")
 main()
