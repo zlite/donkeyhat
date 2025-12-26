@@ -1,3 +1,4 @@
+# Donkey Car Driver with CRSF (GP27/GP26) and E-Stop (CH5)
 import time
 import board
 import busio
@@ -12,9 +13,9 @@ USB_SERIAL = False
 SMOOTHING_INTERVAL_IN_S = 0.020 
 USE_QUADRATURE = False 
 
-# CRSF Setup: Using GP27 (RC1 pin) as the RX pin for the UART
-# CRSF typically runs at 420,000 baud
-rc_uart = busio.UART(None, board.GP27, baudrate=420000, timeout=0)
+# CRSF Setup: Using GP27 for RX (RC1) and GP26 for TX (RC2)
+# This allows bidirectional communication with CRSF/ELRS receivers
+rc_uart = busio.UART(board.GP26, board.GP27, baudrate=420000, timeout=0)
 
 # Hardware Setup for PWM Outputs
 steering_pwm = PWMOut(board.GP11, duty_cycle=0, frequency=60)
@@ -54,6 +55,7 @@ def parse_crsf(data):
         return
     
     # CRSF uses 11-bit values (172=1000ms, 992=1500ms, 1811=2000ms)
+    # Bit-packing logic for CRSF channels
     raw_steer = ((data[3] | data[4] << 8) & 0x07FF)
     raw_thr   = ((data[4] >> 3 | data[5] << 5) & 0x07FF)
     raw_ch5   = ((data[5] >> 6 | data[6] << 2 | data[7] << 10) & 0x07FF)
@@ -75,7 +77,7 @@ def main():
     while True:
         current_time = time.monotonic()
 
-        # 1. Read CRSF Data from Receiver
+        # 1. Read CRSF Data from Receiver (UART1 on GP26/27)
         if rc_uart.in_waiting:
             b = rc_uart.read(1)
             if b == b'\xc8': # Sync byte
@@ -95,7 +97,7 @@ def main():
             if curr2 != last_state2 and not curr2: position2 += 1
             last_state1, last_state2 = curr1, curr2
 
-        # 3. Process Serial from Pi
+        # 3. Process Serial from Pi (UART0 on TX/RX pins)
         incoming_pi = uart_pi.read(32)
         pi_steer, pi_thr = None, None
         if incoming_pi:
@@ -111,13 +113,14 @@ def main():
                     datastr = ""
                 else: datastr += char
 
-        # 4. Final Control Logic & E-Stop
-        # Check Channel 5: If High (>1700), activate E-Stop
+        # 4. Control Handover & E-Stop
+        # Check Channel 5: If High (>1700), force E-Stop
         if rc_values["estop"] > 1700:
-            final_throttle = 1500 # Force Neutral
-            pixel.fill((255, 0, 0)) # Red LED for E-Stop
+            final_throttle = 1500 
+            final_steer = rc_values["steer"]
+            pixel.fill((255, 0, 0)) # Red for E-Stop
         else:
-            pixel.fill((0, 255, 0)) # Green LED for OK
+            pixel.fill((0, 0, 255)) # Blue for Normal
             # Use Pi control if recent, otherwise fall back to RC
             if current_time - last_input_pi < 0.2 and pi_thr is not None:
                 final_throttle = pi_thr
@@ -126,9 +129,10 @@ def main():
                 final_throttle = rc_values["throttle"]
                 final_steer = rc_values["steer"]
 
-        steering_pwm.duty_cycle = servo_duty_cycle(final_steer if 'final_steer' in locals() else rc_values["steer"])
+        # Final PWM output
+        steering_pwm.duty_cycle = servo_duty_cycle(final_steer)
         throttle_pwm.duty_cycle = servo_duty_cycle(final_throttle)
         pixel.show()
 
-print("CRSF Donkey Driver with E-Stop Ready!")
+print("Donkey Driver Ready: CRSF on GP26/27, E-Stop on CH5")
 main()
