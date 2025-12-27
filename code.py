@@ -1,4 +1,5 @@
 # Donkey Car Driver for 2040-based boards
+# Updated: Added E-Stop on RC3 (GP29) and Visual Feedback
 
 import time
 import board
@@ -17,7 +18,7 @@ USE_QUADRATURE = False
 
 # Pin assignments
 RC1, RC2, RC3 = board.GP27, board.GP26, board.GP29
-Steering, Throttle = board.GP11, board.GP10
+Steering_Pin, Throttle_Pin = board.GP11, board.GP10
 Encoder1A_pin, Encoder1B_pin = board.GP8, board.GP9
 Encoder2A_pin, Encoder2B_pin = board.GP13, board.GP14
 
@@ -36,7 +37,7 @@ else:
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 if USB_SERIAL: DEBUG = False
 
-def servo_duty_cycle(pulse_ms, frequency=60): # Restored to 60Hz per oldcode.py
+def servo_duty_cycle(pulse_ms, frequency=60):
     period_ms = 1000.0 / frequency
     duty_cycle = int((pulse_ms / 1000.0) / (period_ms / 65535.0))
     return max(0, min(65535, duty_cycle))
@@ -45,7 +46,7 @@ def state_changed(control):
     if len(control.channel) > 0:
         val = control.channel[-1] 
         if 900 <= val <= 2100:
-            # EMA Smoothing from newcode.py
+            # EMA Smoothing
             control.value = (control.value * 0.7) + (val * 0.3)
             if 1480 < control.value < 1520:
                 control.value = 1500
@@ -58,11 +59,12 @@ class Control:
 
 # Communication and PWM Setup
 uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0) 
-steering_pwm = PWMOut(Steering, duty_cycle=0, frequency=60)
-throttle_pwm = PWMOut(Throttle, duty_cycle=0, frequency=60)
+steering_pwm = PWMOut(Steering_Pin, duty_cycle=0, frequency=60)
+throttle_pwm = PWMOut(Throttle_Pin, duty_cycle=0, frequency=60)
 
 steering_channel = PulseIn(RC1, maxlen=64, idle_state=0)
 throttle_channel = PulseIn(RC2, maxlen=64, idle_state=0)
+estop_channel = PulseIn(RC3, maxlen=64, idle_state=0) # E-Stop Input
 
 steering = Control("Steering", steering_pwm, steering_channel, 1500)
 throttle = Control("Throttle", throttle_pwm, throttle_channel, 1500)
@@ -73,9 +75,9 @@ continuous_mode = False
 continuous_delay = 0
 position1, position2 = 0, 0
 datastr = ""
+rc_estop_val = 1000 # Default to "Off"
 
 def handle_command(command):
-    """Restored command processing logic"""
     global position1, position2, continuous_mode, continuous_delay
     command = command.strip()
     
@@ -98,13 +100,12 @@ def handle_command(command):
         print(f"Continuous: {continuous_mode}")
 
 def send_telemetry():
-    """Helper to format and send encoder/RC data"""
     now_ms = int(time.monotonic() * 1000)
     msg = f"{int(steering.value)}, {int(throttle.value)}, {position1}, {now_ms}; {position2}, {now_ms}\r\n"
     uart.write(msg.encode())
 
 def main():
-    global last_update, continuous_mode, continuous_delay, position1, position2, datastr
+    global last_update, continuous_mode, continuous_delay, position1, position2, datastr, rc_estop_val
     last_led_toggle = time.monotonic()
     last_continuous_send = time.monotonic()
     last_input = 0
@@ -116,10 +117,18 @@ def main():
     while True:
         current_time = time.monotonic()
         
-        # --- Heartbeat LED ---
+        # --- Read E-Stop Channel ---
+        if len(estop_channel) > 0:
+            rc_estop_val = estop_channel[-1]
+            estop_channel.clear()
+
+        # --- Heartbeat LED (Switches to RED if E-Stop is active) ---
         if current_time - last_led_toggle >= 0.5:
             led_state = not led_state
-            pixel.fill((0, 0, 255) if led_state else (0, 0, 0))
+            if rc_estop_val > 1700:
+                pixel.fill((255, 0, 0) if led_state else (0, 0, 0)) # Red Flash
+            else:
+                pixel.fill((0, 0, 255) if led_state else (0, 0, 0)) # Blue Flash
             pixel.show()
             last_led_toggle = current_time
 
@@ -138,7 +147,6 @@ def main():
             if len(steering_channel): state_changed(steering)
             
             if not USB_SERIAL:
-                # Standard RC update back to Pi
                 uart.write(f"{int(steering.value)}, {int(throttle.value)}\r\n".encode())
             last_update = current_time
 
@@ -149,18 +157,16 @@ def main():
 
         # --- Non-Blocking UART Read & Command Handling ---
         incoming = uart.read(32)
+        s_val_in, t_val_in = None, None
         if incoming:
             for b in incoming:
                 char = chr(b)
                 if char in ('\r', '\n'):
                     if datastr:
-                        # Check if it's a numeric steering/throttle command or a text command
                         if len(datastr) >= 8 and datastr[0].isdigit():
                             try:
-                                s_val = int(datastr[:4])
-                                t_val = int(datastr[-4:])
-                                steering.servo.duty_cycle = servo_duty_cycle(s_val)
-                                throttle.servo.duty_cycle = servo_duty_cycle(t_val)
+                                s_val_in = int(datastr[:4])
+                                t_val_in = int(datastr[-4:])
                                 last_input = current_time
                             except ValueError: pass
                         else:
@@ -169,10 +175,19 @@ def main():
                 else:
                     datastr += char
 
-        # --- Control Handover ---
-        if current_time > (last_input + 0.1):
+        # --- Control Handover & E-Stop Logic ---
+        if rc_estop_val > 1700:
+            # E-Stop Active: Overrides everything to neutral throttle
+            steering.servo.duty_cycle = servo_duty_cycle(steering.value)
+            throttle.servo.duty_cycle = servo_duty_cycle(1500)
+        elif current_time < (last_input + 0.1) and t_val_in is not None:
+            # Serial/Pi Control
+            steering.servo.duty_cycle = servo_duty_cycle(s_val_in)
+            throttle.servo.duty_cycle = servo_duty_cycle(t_val_in)
+        else:
+            # RC Control
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
 
-print("Donkey Driver Ready with Encoders!")
+print("Donkey Driver Ready with E-Stop (CH3)!")
 main()
