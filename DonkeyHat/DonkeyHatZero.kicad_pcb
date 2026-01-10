@@ -1069,7 +1069,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "dcadf418-9b8a-4252-abb6-a0725133558f")
-		(at 126.94 58.12)
+		(at 126.97 57.62)
 		(descr "Through hole straight pin header, 1x04, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x04 2.54mm single row")
 		(property "Reference" "I2C1"
@@ -2698,7 +2698,7 @@
 	)
 	(gr_line
 		(start 96.9 43.833)
-		(end 96.9 74.967)
+		(end 96.96 74.63)
 		(stroke
 			(width 0.05)
 			(type default)
@@ -2707,7 +2707,7 @@
 		(uuid "bae97282-0c68-4684-a74e-fdc5649e3b13")
 	)
 	(gr_line
-		(start 166.04 75)
+		(start 166.04 74.64)
 		(end 166.04 43.866)
 		(stroke
 			(width 0.05)
@@ -2717,14 +2717,26 @@
 		(uuid "dd23dcd1-1b90-426d-8427-6405ffecb8ed")
 	)
 	(gr_line
-		(start 96.9 74.997822)
-		(end 166.06 74.997822)
+		(start 96.96 74.64)
+		(end 166.04 74.64)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
 		(uuid "e49ff5d9-6392-4618-b7cf-75daaea39477")
+	)
+	(gr_text "RC2 In"
+		(at 113.73 53.27 0)
+		(layer "F.SilkS")
+		(uuid "260ff296-1555-4051-8571-edb5b5aa63bf")
+		(effects
+			(font
+				(size 0.5 0.5)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
 	)
 	(gr_text "Batt"
 		(at 161.02 55.94 90)
@@ -2759,6 +2771,19 @@
 			(font
 				(size 0.9 0.9)
 				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Thr"
+		(at 122.15 65.99 0)
+		(layer "F.SilkS")
+		(uuid "a66141e4-6b48-42f2-bc07-3273f965ab6c")
+		(effects
+			(font
+				(size 0.6 0.6)
+				(thickness 0.1)
+				(bold yes)
 			)
 			(justify left bottom)
 		)
@@ -2799,8 +2824,8 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Ch1"
-		(at 106.19 44.74 270)
+	(gr_text "RC1"
+		(at 106.26 45.18 270)
 		(layer "F.SilkS")
 		(uuid "f0640e33-e7ec-45fc-ab77-71076703c7e4")
 		(effects
@@ -2852,14 +2877,6 @@
 		(uuid "0126503e-2236-40db-a892-e64d9b771212")
 	)
 	(segment
-		(start 134.1 66.35)
-		(end 127.55 66.35)
-		(width 1)
-		(layer "F.Cu")
-		(net 1)
-		(uuid "1135a80a-2d42-4532-b9b8-526d94caa549")
-	)
-	(segment
 		(start 99.020001 46.17)
 		(end 99.020001 45.919999)
 		(width 0.5)
@@ -2890,6 +2907,14 @@
 		(layer "F.Cu")
 		(net 1)
 		(uuid "4a82c339-411c-4b4a-9a4c-778268699449")
+	)
+	(segment
+		(start 134.1 66.35)
+		(end 128.02 66.35)
+		(width 1)
+		(layer "F.Cu")
+		(net 1)
+		(uuid "5fe49eba-b8c4-4162-86be-8b1548d6925b")
 	)
 	(segment
 		(start 153.375 56.02)
@@ -2956,12 +2981,12 @@
 		(uuid "a25b02ca-66f4-4049-891d-672922dd332c")
 	)
 	(segment
-		(start 127.55 66.35)
+		(start 127.12 65.92)
 		(end 126.94 65.74)
 		(width 1)
 		(layer "F.Cu")
 		(net 1)
-		(uuid "ad762f8c-5216-4be6-b52c-08756d9417f0")
+		(uuid "a8aea3e6-250a-45e2-a625-fc3f0756280e")
 	)
 	(segment
 		(start 100.36 44.82)
@@ -3002,6 +3027,22 @@
 		(layer "F.Cu")
 		(net 1)
 		(uuid "d4758410-36eb-4a6e-9e82-69630fc4390b")
+	)
+	(segment
+		(start 127.59 65.92)
+		(end 127.12 65.92)
+		(width 1)
+		(layer "F.Cu")
+		(net 1)
+		(uuid "eed9c076-287d-4ea4-a2eb-f4a157d52c1f")
+	)
+	(segment
+		(start 128.02 66.35)
+		(end 127.59 65.92)
+		(width 1)
+		(layer "F.Cu")
+		(net 1)
+		(uuid "f5cfc30e-ccf4-45e5-a8bd-4b8b33c5e92d")
 	)
 	(segment
 		(start 100.24 44.7)
